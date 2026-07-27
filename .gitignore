@@ -1,0 +1,24 @@
+# ── DENY BY DEFAULT ─────────────────────────────────────────────────
+# This working folder also contains REAL event documents (PDFs, sign maps,
+# original standalone HTML files, saved masters and exports) with real names
+# and phone numbers. Nothing is committed unless explicitly whitelisted below.
+*
+
+# ── Whitelisted: safe, demo-data-only project files ─────────────────
+!.gitignore
+!README.md
+!JOURNAL.md
+!HANDOFF.md
+!Assembly Info Builder.html
+!README-HowTo.html
+!Demo Regional Convention - Volunteer Info.html
+!docs/
+docs/*
+!docs/screenshots/
+!docs/screenshots/*.png
+
+# ── Never whitelist (reminder for future contributors) ──────────────
+# Parking Info - standalone*.html   → real names & phone numbers
+# *PROJECT (master)*.html           → real saved event data
+# *.pdf, *.JPEG, *.zip              → original event documentation
+# Any export made from real data
