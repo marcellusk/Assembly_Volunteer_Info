@@ -2,6 +2,16 @@
 
 A dated log of changes. Newest entries at the top.
 
+## 2026-07-27 — Release v1.0.0 on GitHub
+
+- Published the first tagged release: v1.0.0 (tag on `main` at the iPhone-fix
+  commit), with three downloadable assets so non-technical users don't have to
+  navigate the repository: the builder, the demo volunteer file, and the
+  illustrated how-to guide.
+- Release convention going forward: tag `vMAJOR.MINOR.PATCH`, attach those same
+  three files (regenerate the demo first if the builder changed), and summarize
+  the changes from this journal in the release notes.
+
 ## 2026-07-27 — Fix: iPhone "black screen" (no-JS static fallback in exports)
 
 - **Bug:** iPhone users opening the volunteer file from Messages/Mail/Files saw a
