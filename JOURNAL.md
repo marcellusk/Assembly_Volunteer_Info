@@ -1,6 +1,29 @@
 # Project Journal — Assembly Info Builder
 
-A dated log of changes. Newest entries at the top. Contributors (human or AI): add an
+A dated log of changes. Newest entries at the top.
+
+## 2026-07-27 — Fix: iPhone "black screen" (no-JS static fallback in exports)
+
+- **Bug:** iPhone users opening the volunteer file from Messages/Mail/Files saw a
+  black screen with no errors. Cause: iOS previews HTML attachments with
+  QuickLook, which renders HTML but does **not execute JavaScript** — and the
+  viewer was 100% JS-rendered on a dark (looked black) background.
+- **Fix:** exports now embed a complete static plain-HTML rendering of every
+  group (all days, contacts with tel: links, rosters, schedules, notes, images,
+  alphabetized directory) plus a banner explaining how to open the interactive
+  version. A one-line head script sets `html.js` when JS runs; app layout CSS is
+  gated on `html.js`, so with JS the static view is hidden instantly and removed,
+  and without JS the file is a normal scrolling light-background document.
+- **No size doubling:** image data now lives ONCE, in the static view's `<img>`
+  tags; the embedded app JSON carries `#simg-N` markers that the viewer resolves
+  from those tags at boot (`buildStaticView()` in the builder produces both).
+- Identical-across-days rosters/schedules collapse to a single "Every day"
+  block in the static view.
+- Verified headlessly with Chrome in both modes (JS on: app identical to before,
+  markers resolved, lightbox works; JS off: static view visible, scrollable,
+  images load, 63 tel links).
+- **Previously distributed exports remain broken on iPhone** — re-export from the
+  updated builder and resend. Contributors (human or AI): add an
 entry here for every meaningful change, with enough detail that the next person can
 understand *why*, not just *what*.
 

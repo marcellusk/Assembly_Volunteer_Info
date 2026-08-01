@@ -203,6 +203,27 @@ Rules and invariants:
 substitute `__TITLE__` and `__PROJECT_JSON__` (function replacements) → download
 `"<event title> - Volunteer Info.html"`.
 
+## The no-JS static fallback (do not remove)
+
+iOS previews HTML attachments (Messages, Mail, Files) with QuickLook, which
+does **not run JavaScript** — a JS-only page shows as a blank dark screen there.
+Exports therefore contain BOTH renderings:
+
+- `buildStaticView(project)` (builder helpers) emits a complete plain-HTML,
+  light-background rendering of everything into `<div id="static-view">`
+  (`__STATIC_VIEW__` token), with a banner telling the reader how to get the
+  interactive version. Identical per-day lists collapse to one "Every day" block.
+- A head script sets `html.js`; the app's fixed-height/overflow-hidden/dark
+  layout CSS is gated on `html.js`, and `html.js #static-view{display:none}`
+  hides the fallback instantly when JS runs.
+- **Images exist once**: the static `<img id="simg-N">` tags hold the data URLs;
+  the embedded JSON's image items carry `"#simg-N"` markers, resolved from the
+  static DOM at viewer boot (which then removes `#static-view` entirely).
+  If you change either side, keep marker production and resolution in sync.
+- When testing, always run the viewer once with JavaScript disabled
+  (`page.setJavaScriptEnabled(false)` in puppeteer) — that IS the iPhone
+  attachment-preview experience.
+
 ## Viewer behavior (inside the template)
 
 - Layout: `body` = fixed-height flex column; sticky dark header (event title, group

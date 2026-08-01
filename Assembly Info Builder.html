@@ -92,10 +92,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>__TITLE__</title>
+<script>document.documentElement.className='js';<\/script>
 <style>
   *{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;background:oklch(0.22 0.03 260);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+  /* Base (no-JS / QuickLook preview): normal scrolling document, light background.
+     The interactive app layout applies only when JS runs (html.js). */
+  body{margin:0;background:#f4f3f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  html.js, html.js body{height:100%}
+  html.js body{background:oklch(0.22 0.03 260);display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+  html.js #static-view{display:none}
+  #static-view{max-width:640px;margin:0 auto;padding:14px 16px 40px;color:#2b2f38;line-height:1.5}
+  .sv-note{background:#fff8e1;border:1px solid #e6d795;border-radius:10px;padding:10px 14px;font-size:14px;margin-bottom:14px}
+  .sv-title{font-size:24px;margin:6px 0 0}
+  .sv-sub{color:#666;font-size:14px;margin-bottom:10px}
+  .sv-group{color:#fff;padding:10px 14px;border-radius:10px;font-size:18px;margin:26px 0 10px}
+  .sv-sec{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#666;margin:18px 0 6px}
+  .sv-day{font-size:15px;margin:12px 0 6px;color:#444;font-weight:700}
+  .sv-card{border:1px solid #ddd;border-radius:10px;background:#fff;margin-bottom:8px;overflow:hidden}
+  .sv-card-h{background:#eef0f3;padding:7px 12px;font-weight:700;font-size:14px}
+  .sv-card-b{padding:8px 12px}
+  .sv-row{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:2px 0}
+  .sv-row .r{color:#667;text-align:right}
+  .sv-contacts{background:#fdeeea;border:1px solid #ecc9c0;border-radius:10px;padding:10px 14px}
+  .sv-notes{background:#fdf7df;border:1px solid #e6d795;border-radius:10px;padding:10px 14px;font-size:14px;white-space:pre-wrap}
+  #static-view img{width:100%;border-radius:8px;border:1px solid #ddd;display:block}
+  #static-view figure{margin:0 0 12px}
+  #static-view figcaption{font-size:13px;color:#666;margin-top:4px}
+  .sv-foot{border-top:1px solid #ddd;margin-top:20px;padding-top:12px;font-size:13px;color:#666;white-space:pre-wrap}
+  #static-view a{color:#2a5aa8;text-decoration:none}
   a{color:oklch(0.45 0.14 255);text-decoration:none}
   header{flex:none;background:oklch(0.22 0.03 260);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 0 0}
   .hwrap{max-width:640px;margin:0 auto;padding:0 16px}
@@ -154,6 +178,7 @@
 </head>
 <body>
 <script type="application/json" id="project-data">__PROJECT_JSON__<\/script>
+<div id="static-view">__STATIC_VIEW__</div>
 <header id="hdr"></header>
 <div class="swiper" id="swiper"></div>
 <div id="lightbox"></div>
@@ -163,6 +188,22 @@
   var ev = project.event, groups = project.groups, days = ev.days;
   var curDay = days.length ? days[0].id : null;
   var curGroup = 0;
+
+  // Image data lives ONCE, in the static view's <img> tags; the JSON carries
+  // "#simg-N" markers. Resolve them, then drop the static view from the DOM.
+  (function(){
+    var sv = document.getElementById('static-view');
+    groups.forEach(function(g){ g.sections.forEach(function(s){
+      if (s.type !== 'images') return;
+      (s.items || []).forEach(function(im){
+        if (im.src && im.src.charAt(0) === '#') {
+          var el = sv ? document.getElementById(im.src.slice(1)) : null;
+          im.src = el ? el.getAttribute('src') : '';
+        }
+      });
+    }); });
+    if (sv && sv.parentNode) sv.parentNode.removeChild(sv);
+  })();
 
   function toTel(p){ return 'tel:+1' + String(p||'').replace(/\D/g,''); }
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -375,6 +416,122 @@ function download(filename, text, mime){
   setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
 }
 function safeName(s){ return (s || 'Event').replace(/[\\/:*?"<>|]+/g, '').trim() || 'Event'; }
+
+/* Static no-JS rendering for exports. iPhones preview HTML attachments with
+   QuickLook, which does NOT run JavaScript — without this, volunteers saw a
+   blank dark page. The export embeds a complete plain-HTML rendering of every
+   group and day; browsers with JS hide it (html.js) and run the app instead.
+   Image data lives only here — the app JSON gets "#simg-N" markers that the
+   viewer resolves from these <img> tags at boot. Returns {html, project}
+   where project is a deep copy with image srcs replaced by markers. */
+function buildStaticView(proj){
+  var p = clone(proj);
+  var HEX = {45:'#b5722a',255:'#3f6bb0',145:'#3f9e58',25:'#b04a3a',305:'#9c4ab0',195:'#2f8fa3',90:'#94942f'};
+  var out = [];
+  var imgCount = 0;
+  function tel(ph){ return 'tel:+1' + String(ph || '').replace(/\D/g, ''); }
+  function phoneLink(ph){ return ph ? '<a href="' + tel(ph) + '">' + esc(ph) + '</a>' : ''; }
+  function daysAllSame(perDay){
+    if (p.event.days.length < 2) return true;
+    var first = JSON.stringify((perDay && perDay[p.event.days[0].id]) || []);
+    for (var i = 1; i < p.event.days.length; i++) {
+      if (JSON.stringify((perDay && perDay[p.event.days[i].id]) || []) !== first) return false;
+    }
+    return true;
+  }
+  function eachDay(perDay, renderList){
+    if (daysAllSame(perDay)) {
+      var list = (perDay && perDay[p.event.days[0] && p.event.days[0].id]) || [];
+      if (p.event.days.length > 1 && list.length) out.push('<div class="sv-day">Every day</div>');
+      renderList(list);
+    } else {
+      p.event.days.forEach(function(d){
+        var list = (perDay && perDay[d.id]) || [];
+        if (!list.length) return;
+        out.push('<div class="sv-day">' + esc(d.label) + '</div>');
+        renderList(list);
+      });
+    }
+  }
+  out.push('<div class="sv-note"><b>Simplified view.</b> For day tabs, search, and swiping between departments, open this file in a web browser (Safari, Chrome…) — for example, save it to Files and open it from there, or use your phone’s Share &#8594; Open in Browser option.</div>');
+  out.push('<h1 class="sv-title">' + esc(p.event.title) + '</h1>');
+  if (p.event.subtitle) out.push('<div class="sv-sub">' + esc(p.event.subtitle) + '</div>');
+  p.groups.forEach(function(g){
+    out.push('<h2 class="sv-group" style="background:' + (HEX[g.hue] || '#556') + '">' + esc(g.name) + '</h2>');
+    g.sections.forEach(function(s){
+      if (s.type === 'contacts') {
+        if (!(s.items || []).length) return;
+        out.push('<div class="sv-sec">' + esc(s.title) + '</div><div class="sv-contacts">');
+        s.items.forEach(function(c){
+          out.push('<div class="sv-row"><span><b>' + esc(c.name) + '</b>' + (c.role ? ' — ' + esc(c.role) : '') + '</span><span>' + phoneLink(c.phone) + '</span></div>');
+        });
+        out.push('</div>');
+      }
+      else if (s.type === 'roster') {
+        out.push('<div class="sv-sec">' + esc(s.title) + '</div>');
+        eachDay(s.perDay, function(list){
+          list.forEach(function(area){
+            out.push('<div class="sv-card"><div class="sv-card-h">' + esc(area.name) + '</div><div class="sv-card-b">');
+            (area.people || []).forEach(function(pp){
+              out.push('<div class="sv-row"><span>' + esc(pp.name) + '</span><span class="r">' + esc(pp.role) + '</span></div>');
+            });
+            out.push('</div></div>');
+          });
+        });
+      }
+      else if (s.type === 'schedule') {
+        out.push('<div class="sv-sec">' + esc(s.title) + '</div>');
+        eachDay(s.perDay, function(list){
+          out.push('<div class="sv-card"><div class="sv-card-b">');
+          list.forEach(function(r){
+            out.push('<div class="sv-row"><span><b>' + esc(r.time) + '</b>&nbsp; ' + esc(r.name) + '</span><span>' + phoneLink(r.phone) + '</span></div>');
+          });
+          out.push('</div></div>');
+        });
+      }
+      else if (s.type === 'notes') {
+        if (s.byDay) {
+          var any = false;
+          p.event.days.forEach(function(d){ if (((s.perDayText || {})[d.id] || '').trim()) any = true; });
+          if (!any) return;
+          out.push('<div class="sv-sec">' + esc(s.title) + '</div>');
+          p.event.days.forEach(function(d){
+            var t = ((s.perDayText || {})[d.id] || '').trim();
+            if (!t) return;
+            out.push('<div class="sv-day">' + esc(d.label) + '</div><div class="sv-notes">' + esc(t) + '</div>');
+          });
+        } else if ((s.text || '').trim()) {
+          out.push('<div class="sv-sec">' + esc(s.title) + '</div><div class="sv-notes">' + esc(s.text) + '</div>');
+        }
+      }
+      else if (s.type === 'images') {
+        var items = (s.items || []).filter(function(im){ return im.src; });
+        if (!items.length) return;
+        out.push('<div class="sv-sec">' + esc(s.title) + '</div>');
+        (s.items || []).forEach(function(im){
+          if (!im.src) return;
+          var id = 'simg-' + (imgCount++);
+          out.push('<figure><img id="' + id + '" src="' + im.src + '" alt="' + esc(im.caption) + '">' +
+            (im.caption ? '<figcaption>' + esc(im.caption) + '</figcaption>' : '') + '</figure>');
+          im.src = '#' + id;
+        });
+      }
+      else if (s.type === 'directory') {
+        if (!(s.items || []).length) return;
+        out.push('<div class="sv-sec">' + esc(s.title) + ' (' + s.items.length + ')</div><div class="sv-card"><div class="sv-card-b">');
+        s.items.slice().sort(function(a, b){ return (a.name || '').localeCompare(b.name || ''); }).forEach(function(v){
+          out.push('<div class="sv-row" style="padding:5px 0"><span><b>' + esc(v.name) + '</b>' +
+            (v.assignment ? '<br><span style="color:#667;font-size:13px">' + esc(v.assignment) + '</span>' : '') +
+            (v.constraints ? '<br><i style="color:#996;font-size:12px">' + esc(v.constraints) + '</i>' : '') +
+            '</span><span>' + phoneLink(v.phone) + '</span></div>');
+        });
+        out.push('</div></div>');
+      }
+    });
+  });
+  if ((p.event.footer || '').trim()) out.push('<div class="sv-foot">' + esc(p.event.footer) + '</div>');
+  return { html: out.join(''), project: p };
+}
 
 var HUES = [45, 255, 145, 25, 305, 195, 90];
 
@@ -674,10 +831,12 @@ function compressImage(file, cb){
 function exportViewer(){
   var tpl = document.getElementById('viewer-src').textContent;
   tpl = tpl.split('<\\/script>').join('</scr' + 'ipt>');
-  var json = JSON.stringify(project).replace(/</g, '\\u003c');
+  var sv = buildStaticView(project);   // image data moves into the static HTML; JSON gets #simg-N markers
+  var json = JSON.stringify(sv.project).replace(/</g, '\\u003c');
   var title = project.event.title + (project.event.subtitle ? ' — ' + project.event.subtitle : '');
   var html = tpl.trim()
     .replace('__TITLE__', function(){ return esc(title); })
+    .replace('__STATIC_VIEW__', function(){ return sv.html; })
     .replace('__PROJECT_JSON__', function(){ return json; });
   download(safeName(project.event.title) + ' - Volunteer Info.html', html);
 }
