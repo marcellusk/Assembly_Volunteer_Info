@@ -203,6 +203,37 @@ Rules and invariants:
 substitute `__TITLE__` and `__PROJECT_JSON__` (function replacements) → download
 `"<event title> - Volunteer Info.html"`.
 
+## Group colors (any color, guaranteed readable)
+
+Groups store `color`: a plain `#rrggbb` string the user picks from 12 presets or
+a native `<input type="color">`. Hex, not oklch, because these values also feed
+the static no-JS view that must render on old phones.
+
+- **Never render `color` directly.** Call `groupUi(g)` → `{bg, fg, accent}`.
+  `bg` is the render-safe background, `fg` is contrast-checked label text,
+  `accent` is a brightened variant for the dark header (day-tab underline).
+- **`ensureReadable(bg)` is the guarantee.** Some vivid mid-tones (hot pink,
+  mid greens) fail WCAG AA against *both* white and dark text, so when no text
+  color reaches 4.5:1 the background itself is nudged darker/lighter until one
+  does. `g.color` always keeps exactly what the user picked; only the rendered
+  value shifts. Fuzzed over 10k random colors: zero failures. The 12 `PRESETS`
+  are chosen to already clear the bar, so clicking a swatch renders exactly the
+  color shown — keep it that way if you edit the palette.
+- **Colors are resolved once, at export**, in `buildStaticView()`, which stamps
+  `g.ui` onto the exported project copy. The viewer and the static markup both
+  read `g.ui`, so the two renderings can't disagree and the viewer needs no
+  color math of its own.
+- **Import validates strictly** (`normHex`): the value lands in a `style`
+  attribute, so anything that isn't `#rgb`/`#rrggbb` is rejected and replaced
+  with a preset. Never relax this.
+- **Legacy**: schemaVersion 1 files stored a `hue` number from a fixed palette;
+  `migrate()` converts it via `LEGACY_HUES` on every load and deletes `hue`.
+  `colorPicker(target, onCommit)` is written against any object with a `color`
+  property, so subgroups can reuse it unchanged.
+- The picker re-renders on `change`, not `input` — re-rendering mid-drag would
+  tear down the color input and close the OS picker. `input` updates the model
+  and the live preview chip only.
+
 ## The no-JS static fallback (do not remove)
 
 iOS previews HTML attachments (Messages, Mail, Files) with QuickLook, which

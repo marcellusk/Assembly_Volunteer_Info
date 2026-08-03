@@ -54,9 +54,13 @@
   .subcard-head{display:flex;gap:6px;align-items:center;background:oklch(0.94 0.01 260);padding:7px 10px}
   .subcard-head input{font-weight:700;font-size:13px}
   .subcard-body{padding:9px 10px}
-  .swatches{display:flex;gap:6px;align-items:center}
-  .swatch{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
-  .swatch.active{border-color:var(--ink)}
+  .swatches{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .swatch{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;flex:none}
+  .swatch.active{border-color:var(--ink);box-shadow:0 0 0 2px #fff inset}
+  .swatch-custom{display:inline-block;position:relative;overflow:hidden;background:conic-gradient(#e0364e,#e08a36,#e0d436,#3fb85c,#36c6d0,#3f6bb0,#9c4ab0,#e0364e)}
+  .swatch-custom input[type=color]{position:absolute;left:-10px;top:-10px;width:52px;height:52px;opacity:0;cursor:pointer;border:none;padding:0;background:none}
+  .hexlabel{font-size:11px;color:var(--ink3);font-family:ui-monospace,Consolas,monospace;min-width:54px}
+  .colorchip{font-size:12px;font-weight:700;border-radius:99px;padding:4px 12px;white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis}
   .addsec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
   .addsec{border:1px solid var(--line2);background:#fff;border-radius:10px;padding:12px;text-align:left;cursor:pointer}
   .addsec:hover{border-color:var(--ink3);background:oklch(0.98 0.005 260)}
@@ -207,7 +211,13 @@
 
   function toTel(p){ return 'tel:+1' + String(p||'').replace(/\D/g,''); }
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function hueColor(h,l,c){ return 'oklch(' + (l||0.7) + ' ' + (c||0.16) + ' ' + h + ')'; }
+  // Group colors are resolved at export time into g.ui {bg, fg, accent} —
+  // bg is the group's color, fg is contrast-checked text, accent is a
+  // brightened variant for use on the dark header. Any color is possible,
+  // so never assume white text works on bg.
+  function gui(g){
+    return (g && g.ui && g.ui.bg) ? g.ui : {bg:'#556070', fg:'#ffffff', accent:'#8fa0b8'};
+  }
 
   var hdr = document.getElementById('hdr');
   var swiper = document.getElementById('swiper');
@@ -218,7 +228,7 @@
     if (groups.length > 1) {
       h += '<div class="pills" id="pills">';
       groups.forEach(function(g,i){
-        var st = i===curGroup ? 'background:' + hueColor(g.hue,0.55,0.15) + ';' : '';
+        var st = i===curGroup ? 'background:' + gui(g).bg + ';color:' + gui(g).fg + ';border-color:transparent;' : '';
         h += '<button class="pill' + (i===curGroup?' active':'') + '" style="' + st + '" data-g="' + i + '">' + esc(g.name) + '</button>';
       });
       h += '</div>';
@@ -227,7 +237,7 @@
       h += '<div class="daytabs">';
       days.forEach(function(d){
         var ac = d.id===curDay;
-        var st = ac ? 'border-bottom-color:' + hueColor(groups[curGroup]?groups[curGroup].hue:45,0.7,0.16) : '';
+        var st = ac ? 'border-bottom-color:' + gui(groups[curGroup]).accent : '';
         h += '<button class="dtab' + (ac?' active':'') + '" style="' + st + '" data-d="' + d.id + '">' + esc(d.label) + '</button>';
       });
       h += '</div>';
@@ -406,7 +416,106 @@
 function uid(){ return 'x' + Math.random().toString(36).slice(2, 10); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
-function hueColor(h,l,c){ return 'oklch(' + (l||0.55) + ' ' + (c||0.15) + ' ' + h + ')'; }
+
+/* ── Group colors ──────────────────────────────────────────────
+   Groups store a plain hex string (`color`). Any color is allowed, so
+   nothing may assume a fixed palette: text placed on a group color is
+   chosen for contrast (readableOn), and accents shown on the dark header
+   are brightened (onDarkBg). Hex — not oklch — because these values also
+   feed the static no-JS view, which must render on older phones.
+   `hue` numbers from schemaVersion 1 files migrate through LEGACY_HUES. */
+var DEFAULT_COLOR = '#556070';
+var LEGACY_HUES = {45:'#a46826', 255:'#3f6bb0', 145:'#3f9e58', 25:'#b04a3a',
+                   305:'#9c4ab0', 195:'#2a8193', 90:'#94942f'};
+// Every preset already clears the 4.5:1 label-contrast bar, so clicking a
+// swatch renders exactly the color shown — no readability nudge applied.
+var PRESETS = ['#a46826','#c0562f','#b04a3a','#a8324a','#9c4ab0','#6a5ac0',
+               '#3f6bb0','#2a8193','#3f9e58','#60802a','#94942f','#556070'];
+
+function normHex(c){
+  if (typeof c !== 'string') return null;
+  var s = c.trim();
+  if (/^#[0-9a-f]{3}$/i.test(s)) s = '#' + s[1] + s[1] + s[2] + s[2] + s[3] + s[3];
+  return /^#[0-9a-f]{6}$/i.test(s) ? s.toLowerCase() : null;
+}
+function groupColor(g){
+  return (g && normHex(g.color)) || (g && LEGACY_HUES[g.hue]) || DEFAULT_COLOR;
+}
+function hexToRgb(hex){
+  var h = normHex(hex) || DEFAULT_COLOR;
+  return [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+}
+function rgbToHex(r,g,b){
+  function p(v){ return ('0' + Math.max(0, Math.min(255, Math.round(v))).toString(16)).slice(-2); }
+  return '#' + p(r) + p(g) + p(b);
+}
+function rgbToHsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  var mx = Math.max(r,g,b), mn = Math.min(r,g,b), d = mx-mn, hh = 0, s = 0, l = (mx+mn)/2;
+  if (d) {
+    s = l > 0.5 ? d/(2-mx-mn) : d/(mx+mn);
+    if (mx === r) hh = ((g-b)/d + (g < b ? 6 : 0));
+    else if (mx === g) hh = (b-r)/d + 2;
+    else hh = (r-g)/d + 4;
+    hh /= 6;
+  }
+  return [hh, s, l];
+}
+function hslToHex(hh,s,l){
+  function f(n){
+    var k = (n + hh*12) % 12;
+    return (l - s*Math.min(l,1-l)*Math.max(-1, Math.min(k-3, Math.min(9-k, 1)))) * 255;
+  }
+  return rgbToHex(f(0), f(8), f(4));
+}
+/* WCAG relative luminance; threshold picked so mid-tones keep white text
+   and only genuinely light picks (pastels, yellows) flip to dark. */
+function luminance(hex){
+  var c = hexToRgb(hex).map(function(v){
+    v /= 255;
+    return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
+  });
+  return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2];
+}
+function readableOn(hex){ return luminance(hex) > 0.32 ? '#1d2433' : '#ffffff'; }
+function contrastRatio(a, b){
+  var la = luminance(a), lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+/* Guarantees the group's label is legible on the group's color. Some vivid
+   mid-tones (hot pink, mid greens) fail WCAG AA against BOTH white and dark
+   text, so when no text color reaches 4.5:1 the background itself is nudged
+   darker or lighter until one does. `color` keeps exactly what the user
+   picked; only this render-time value shifts, and the builder shows a live
+   preview chip so what they see is what volunteers get. */
+var MIN_CONTRAST = 4.5;
+function ensureReadable(bg){
+  var fg = readableOn(bg);
+  if (contrastRatio(bg, fg) >= MIN_CONTRAST) return { bg: bg, fg: fg };
+  var alt = fg === '#ffffff' ? '#1d2433' : '#ffffff';
+  if (contrastRatio(bg, alt) >= MIN_CONTRAST) return { bg: bg, fg: alt };
+  var rgb = hexToRgb(bg), hsl = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+  var goDark = luminance(bg) <= 0.35;          // nearer to needing white text
+  var text = goDark ? '#ffffff' : '#1d2433';
+  var l = hsl[2];
+  for (var i = 0; i < 50; i++) {
+    l = goDark ? l - 0.02 : l + 0.02;
+    if (l <= 0 || l >= 1) break;
+    var cand = hslToHex(hsl[0], hsl[1], l);
+    if (contrastRatio(cand, text) >= MIN_CONTRAST) return { bg: cand, fg: text };
+  }
+  return goDark ? { bg: '#000000', fg: '#ffffff' } : { bg: '#ffffff', fg: '#1d2433' };
+}
+/* Same color, guaranteed to read as an accent against the dark header. */
+function onDarkBg(hex){
+  var rgb = hexToRgb(hex), hsl = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+  return hslToHex(hsl[0], Math.max(hsl[1], 0.45), Math.max(hsl[2], 0.58));
+}
+function groupUi(g){
+  var picked = groupColor(g);
+  var safe = ensureReadable(picked);
+  return { bg: safe.bg, fg: safe.fg, accent: onDarkBg(picked) };
+}
 function download(filename, text, mime){
   var blob = new Blob([text], {type: mime || 'text/html'});
   var url = URL.createObjectURL(blob);
@@ -426,7 +535,9 @@ function safeName(s){ return (s || 'Event').replace(/[\\/:*?"<>|]+/g, '').trim()
    where project is a deep copy with image srcs replaced by markers. */
 function buildStaticView(proj){
   var p = clone(proj);
-  var HEX = {45:'#b5722a',255:'#3f6bb0',145:'#3f9e58',25:'#b04a3a',305:'#9c4ab0',195:'#2f8fa3',90:'#94942f'};
+  // Resolve each group's colors ONCE here; both the static markup below and the
+  // exported app JSON read them, so the two renderings can never disagree.
+  p.groups.forEach(function(g){ g.ui = groupUi(g); });
   var out = [];
   var imgCount = 0;
   function tel(ph){ return 'tel:+1' + String(ph || '').replace(/\D/g, ''); }
@@ -457,7 +568,7 @@ function buildStaticView(proj){
   out.push('<h1 class="sv-title">' + esc(p.event.title) + '</h1>');
   if (p.event.subtitle) out.push('<div class="sv-sub">' + esc(p.event.subtitle) + '</div>');
   p.groups.forEach(function(g){
-    out.push('<h2 class="sv-group" style="background:' + (HEX[g.hue] || '#556') + '">' + esc(g.name) + '</h2>');
+    out.push('<h2 class="sv-group" style="background:' + g.ui.bg + ';color:' + g.ui.fg + '">' + esc(g.name) + '</h2>');
     g.sections.forEach(function(s){
       if (s.type === 'contacts') {
         if (!(s.items || []).length) return;
@@ -533,7 +644,6 @@ function buildStaticView(proj){
   return { html: out.join(''), project: p };
 }
 
-var HUES = [45, 255, 145, 25, 305, 195, 90];
 
 /* ═════════════════════════ seed data (initial parking dept) ═════════════════════════ */
 function seedProject(){
@@ -627,7 +737,7 @@ function seedProject(){
     },
     groups: [
       {
-        id: uid(), name: 'Parking', hue: 45,
+        id: uid(), name: 'Parking', color: '#a46826',
         sections: [
           {id: uid(), type:'contacts', title:'Emergency / Leadership', items:[
             {name:'Roland Pierce', role:'Parking Overseer', phone:'816-555-0110'},
@@ -678,7 +788,7 @@ function seedProject(){
         ]
       },
       {
-        id: uid(), name: 'Cleaning', hue: 145,
+        id: uid(), name: 'Cleaning', color: '#3f9e58',
         sections: [
           {id: uid(), type:'contacts', title:'Leadership', items:[
             {name:'Stanley Burke', role:'Cleaning Overseer', phone:'816-555-0120'},
@@ -704,7 +814,7 @@ function seedProject(){
         ]
       },
       {
-        id: uid(), name: 'Stage', hue: 305,
+        id: uid(), name: 'Stage', color: '#9c4ab0',
         sections: [
           {id: uid(), type:'contacts', title:'Leadership', items:[
             {name:'Everett Shaw', role:'Stage Overseer', phone:'816-555-0130'},
@@ -729,7 +839,7 @@ function seedProject(){
         ]
       },
       {
-        id: uid(), name: 'Seating', hue: 255,
+        id: uid(), name: 'Seating', color: '#3f6bb0',
         sections: [
           {id: uid(), type:'contacts', title:'Leadership', items:[
             {name:'Gordon Ferris', role:'Seating Overseer', phone:'816-555-0140'},
@@ -777,6 +887,17 @@ function loadProject(){
     project = stored || seedProject();
   }
   if (!project.projectId) { project.projectId = uid(); }
+  migrate(project);
+}
+
+/* Forward-only upgrades for files written by earlier versions. Keep each step
+   idempotent — this runs on every load, including files already migrated. */
+function migrate(p){
+  (p.groups || []).forEach(function(g){
+    // v1 stored a `hue` number from a fixed palette; v2 stores any hex color.
+    if (!normHex(g.color)) g.color = LEGACY_HUES[g.hue] || DEFAULT_COLOR;
+    delete g.hue;
+  });
 }
 var pendingRestore = null;
 
@@ -874,7 +995,7 @@ function exportGroupJson(){
   });
   var payload = {
     format: 'assembly-info-group',
-    schemaVersion: 1,
+    schemaVersion: 2,
     exportedAt: new Date().toISOString(),
     event: {
       title: project.event.title,
@@ -984,8 +1105,10 @@ function importGroupJson(file){
     var g = {
       id: uid(),
       name: cleanStr(raw.group.name) || 'Imported Group',
-      hue: (typeof raw.group.hue === 'number' && HUES.indexOf(raw.group.hue) >= 0)
-        ? raw.group.hue : HUES[project.groups.length % HUES.length],
+      // Any color is allowed, but it lands in a style attribute — accept only
+      // a strict #rrggbb, never raw text from the file.
+      color: normHex(raw.group.color) || LEGACY_HUES[raw.group.hue]
+        || PRESETS[project.groups.length % PRESETS.length],
       sections: []
     };
     arr(raw.group.sections).forEach(function(rs){
@@ -1119,7 +1242,12 @@ function renderGroupTabs(){
   var tabs = h('<div class="grouptabs"></div>');
   project.groups.forEach(function(g, gi){
     var b = h('<button class="gtab">' + esc(g.name || 'Untitled') + '</button>');
-    if (gi === curGroupIdx) { b.classList.add('active'); b.style.background = hueColor(g.hue); }
+    if (gi === curGroupIdx) {
+      var ui = groupUi(g);
+      b.classList.add('active');
+      b.style.background = ui.bg;
+      b.style.color = ui.fg;
+    }
     bind(b, 'click', function(){ curGroupIdx = gi; render(); });
     tabs.appendChild(b);
   });
@@ -1127,8 +1255,8 @@ function renderGroupTabs(){
   bind(add, 'click', function(){
     var name = prompt('Name of the new group (e.g. Attendants, First Aid, Cleaning):', '');
     if (!name) return;
-    var hue = HUES[project.groups.length % HUES.length];
-    project.groups.push({id: uid(), name: name, hue: hue, sections: []});
+    var color = PRESETS[project.groups.length % PRESETS.length];
+    project.groups.push({id: uid(), name: name, color: color, sections: []});
     curGroupIdx = project.groups.length - 1;
     persist(); render();
   });
@@ -1144,6 +1272,55 @@ function renderGroupTabs(){
   return c;
 }
 
+/* Preset swatches + a native color input for anything else. Written against
+   any object with a `color` property so subgroups can reuse it unchanged.
+   Dragging in the OS picker fires `input` continuously — those update the
+   model and the preview only; a full re-render happens on `change`, because
+   re-rendering mid-drag would tear down the input and close the picker. */
+function colorPicker(target, onCommit){
+  var cur = groupColor(target);
+  var wrap = h('<div class="swatches"></div>');
+  PRESETS.forEach(function(hex){
+    var s = h('<button class="swatch" style="background:' + hex + '" title="' + hex + '"></button>');
+    if (hex === cur) s.classList.add('active');
+    bind(s, 'click', function(){ target.color = hex; onCommit(); });
+    wrap.appendChild(s);
+  });
+  var isCustom = PRESETS.indexOf(cur) < 0;
+  var lab = h('<label class="swatch swatch-custom" title="Choose any other color…"></label>');
+  if (isCustom) { lab.classList.add('active'); lab.style.background = cur; }
+  var ci = h('<input type="color">');
+  ci.value = cur;
+  var hexLabel = h('<span class="hexlabel">' + esc(cur) + '</span>');
+  var chip = h('<span class="colorchip"></span>');
+  function paintChip(){
+    var ui = groupUi(target);
+    chip.style.background = ui.bg;
+    chip.style.color = ui.fg;
+    chip.textContent = target.name || 'Preview';
+  }
+  paintChip();
+  bind(ci, 'input', function(){
+    var v = normHex(ci.value);
+    if (!v) return;
+    target.color = v;
+    hexLabel.textContent = v;
+    lab.style.background = v;
+    paintChip();
+    persist();
+  });
+  bind(ci, 'change', function(){
+    var v = normHex(ci.value);
+    if (v) target.color = v;
+    onCommit();
+  });
+  lab.appendChild(ci);
+  wrap.appendChild(lab);
+  wrap.appendChild(hexLabel);
+  wrap.appendChild(chip);
+  return wrap;
+}
+
 function renderGroupSettings(){
   var g = curGroup();
   var c = h('<div class="card"></div>');
@@ -1154,14 +1331,7 @@ function renderGroupSettings(){
   bind(inp, 'change', function(){ render(); });
   row.appendChild(inp);
 
-  var sw = h('<div class="swatches" title="Accent color for this group"></div>');
-  HUES.forEach(function(hh){
-    var s = h('<button class="swatch" style="background:' + hueColor(hh) + '"></button>');
-    if (hh === g.hue) s.classList.add('active');
-    bind(s, 'click', function(){ g.hue = hh; persist(); render(); });
-    sw.appendChild(s);
-  });
-  row.appendChild(sw);
+  row.appendChild(colorPicker(g, function(){ persist(); render(); }));
 
   var left = h('<button class="btn-mini" title="Move group earlier">&#9664;</button>');
   var right = h('<button class="btn-mini" title="Move group later">&#9654;</button>');

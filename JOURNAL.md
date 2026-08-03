@@ -2,6 +2,33 @@
 
 A dated log of changes. Newest entries at the top.
 
+## 2026-07-28 — Any-color group picker (schemaVersion 2)
+
+- Replaced the fixed 7-hue palette with a real color picker: 12 curated presets
+  plus a native `<input type="color">` for anything else, a hex readout, and a
+  live preview chip showing exactly how the group name will render.
+- **Data model:** groups now store `color` (`#rrggbb`) instead of `hue` (a
+  number from a fixed palette). `migrate()` converts old files via
+  `LEGACY_HUES` on every load; group JSON import accepts either. Group-share
+  files bumped to `schemaVersion: 2`.
+- **Readability is guaranteed, not assumed.** Since users can pick anything,
+  `groupUi()` contrast-checks the label and, for colors where neither white nor
+  dark text reaches 4.5:1 (vivid pinks/greens), nudges the rendered background
+  until one does. The user's chosen `color` is never modified — only the
+  rendered value. Fuzz test: 10,000+ random colors, zero contrast failures.
+- Discovered while testing that three of my own initial presets needed nudging,
+  so the shipped palette was replaced with contrast-safe equivalents; a clicked
+  swatch now renders exactly as displayed. Demo Parking orange shifted
+  `#b5722a` → `#a46826` as a result.
+- Colors resolve once at export into `g.ui {bg, fg, accent}`, consumed by both
+  the interactive viewer and the static no-JS view, so they cannot drift apart.
+  Removed the last hardcoded hue→hex map from the static view.
+- Import hardening: color values land in a `style` attribute, so `normHex()`
+  rejects anything that isn't a strict hex (verified against attribute-breakout
+  and `javascript:` payloads).
+- Regenerated demo, screenshots, and how-to (which now explains the rainbow
+  custom-color button and why a color may render slightly adjusted).
+
 ## 2026-07-27 — Release v1.0.0 on GitHub
 
 - Published the first tagged release: v1.0.0 (tag on `main` at the iPhone-fix
