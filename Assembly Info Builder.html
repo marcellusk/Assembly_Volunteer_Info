@@ -124,6 +124,8 @@
   #static-view figcaption{font-size:13px;color:#666;margin-top:4px}
   .sv-foot{border-top:1px solid #ddd;margin-top:20px;padding-top:12px;font-size:13px;color:#666;white-space:pre-wrap}
   #static-view a{color:#2a5aa8;text-decoration:none}
+  #static-view a.wa{display:inline-block;background:#25d366;color:#06331f;font-size:11px;font-weight:700;
+    border-radius:99px;padding:1px 8px;margin-left:6px;white-space:nowrap}
   a{color:oklch(0.45 0.14 255);text-decoration:none}
   header{flex:none;background:oklch(0.22 0.03 260);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 0 0}
   .hwrap{max-width:640px;margin:0 auto;padding:0 16px}
@@ -178,6 +180,10 @@
   .lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
   .lightbox img{max-width:100%;max-height:100%;border-radius:6px}
   .empty{font-size:13px;color:oklch(0.6 0.01 260);font-style:italic}
+  .links{display:inline-flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:flex-end;white-space:nowrap}
+  a.wa{display:inline-flex;align-items:center;background:#25d366;color:#06331f;font-size:11px;font-weight:700;
+    border-radius:99px;padding:2px 8px;margin-left:6px;white-space:nowrap;line-height:1.4}
+  a.wa:active{filter:brightness(0.92)}
 </style>
 </head>
 <body>
@@ -211,6 +217,27 @@
 
   function toTel(p){ return 'tel:+1' + String(p||'').replace(/\D/g,''); }
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  // WhatsApp: volunteers often reach each other there on site because plain
+  // calls get ignored as spam. Values were validated at export; re-check here
+  // so nothing but a wa.me/whatsapp.com URL can ever reach an href.
+  var WA_RE = /^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com)\/[A-Za-z0-9\-._~:\/?#\[\]@!$&'()*+,;=%]*$/;
+  var WA_ICON = '<svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true" style="vertical-align:-1px;margin-right:3px"><path d="M12 3C6.8 3 2.5 6.4 2.5 10.6c0 2.2 1.2 4.2 3.1 5.6-.1.9-.5 2.2-1.4 3.4 0 0 2.5-.4 4.4-1.9 1 .3 2.2.5 3.4.5 5.2 0 9.5-3.4 9.5-7.6S17.2 3 12 3z"/></svg>';
+  function waHref(raw){
+    var s = String(raw == null ? '' : raw).trim();
+    if (!s) return '';
+    if (WA_RE.test(s)) return s;
+    if (/^[+(]?[\d\s().-]{7,}$/.test(s)) {
+      var d = s.replace(/\D/g, '');
+      if (d.length === 10) d = '1' + d;
+      if (d.length >= 10 && d.length <= 15) return 'https://wa.me/' + d;
+    }
+    return '';
+  }
+  function waTag(raw){
+    var w = waHref(raw);
+    return w ? '<a class="wa" href="' + esc(w) + '">' + WA_ICON + 'WhatsApp</a>' : '';
+  }
   // Group colors are resolved at export time into g.ui {bg, fg, accent} —
   // bg is the group's color, fg is contrast-checked text, accent is a
   // brightened variant for use on the dark header. Any color is possible,
@@ -263,7 +290,9 @@
       if (!sec.items.length) out += '<div class="empty">No contacts listed.</div>';
       sec.items.forEach(function(p){
         out += '<div class="crow"><div class="top"><strong>' + esc(p.name) + '</strong>' +
+          '<span class="links">' +
           (p.phone ? '<a href="' + toTel(p.phone) + '" style="font-weight:600">' + esc(p.phone) + '</a>' : '') +
+          waTag(p.wa) + '</span>' +
           '</div><div class="role">' + esc(p.role) + '</div></div>';
       });
       out += '</div>';
@@ -287,7 +316,9 @@
       if (!rows.length) out += '<div class="srow"><span class="empty">Nothing scheduled for this day.</span></div>';
       rows.forEach(function(r){
         out += '<div class="srow"><span class="t">' + esc(r.time) + '</span><span class="n">' + esc(r.name) + '</span>' +
-          (r.phone ? '<a href="' + toTel(r.phone) + '">' + esc(r.phone) + '</a>' : '') + '</div>';
+          '<span class="links">' +
+          (r.phone ? '<a href="' + toTel(r.phone) + '">' + esc(r.phone) + '</a>' : '') +
+          waTag(r.wa) + '</span></div>';
       });
       out += '</div></div>';
     }
@@ -328,7 +359,9 @@
         out += '<div class="dirlist">';
         list.forEach(function(v){
           out += '<div class="dcard"><div class="top"><b>' + esc(v.name) + '</b>' +
-            (v.phone ? '<a href="' + toTel(v.phone) + '">' + esc(v.phone) + '</a>' : '') + '</div>' +
+            '<span class="links">' +
+            (v.phone ? '<a href="' + toTel(v.phone) + '">' + esc(v.phone) + '</a>' : '') +
+            waTag(v.wa) + '</span></div>' +
             (v.assignment ? '<div class="asg">' + esc(v.assignment) + '</div>' : '') +
             (v.constraints ? '<div class="con">' + esc(v.constraints) + '</div>' : '') + '</div>';
         });
@@ -526,6 +559,29 @@ function download(filename, text, mime){
 }
 function safeName(s){ return (s || 'Event').replace(/[\\/:*?"<>|]+/g, '').trim() || 'Event'; }
 
+/* ── WhatsApp links ────────────────────────────────────────────
+   On site, volunteers often reach each other over WhatsApp because plain
+   calls get ignored as spam, so a person can carry a WhatsApp contact
+   alongside their phone number. The stored value is whatever the editor
+   typed (a number or a pasted link); waLink() turns it into a safe URL.
+   This lands in an href, so it is a security boundary: only wa.me /
+   whatsapp.com URLs or a plain phone number are ever accepted, and an
+   empty string means "no WhatsApp" (nothing is rendered). */
+var WA_URL_RE = /^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com)\/[A-Za-z0-9\-._~:\/?#\[\]@!$&'()*+,;=%]*$/;
+// Generic speech bubble (not the WhatsApp mark) so the file carries no third-party logo.
+var WA_ICON = '<svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true" style="vertical-align:-1px;margin-right:3px"><path d="M12 3C6.8 3 2.5 6.4 2.5 10.6c0 2.2 1.2 4.2 3.1 5.6-.1.9-.5 2.2-1.4 3.4 0 0 2.5-.4 4.4-1.9 1 .3 2.2.5 3.4.5 5.2 0 9.5-3.4 9.5-7.6S17.2 3 12 3z"/></svg>';
+function waLink(raw){
+  var s = String(raw == null ? '' : raw).trim();
+  if (!s) return '';
+  if (WA_URL_RE.test(s)) return s;
+  if (/^[+(]?[\d\s().-]{7,}$/.test(s)) {          // a phone number, any formatting
+    var d = s.replace(/\D/g, '');
+    if (d.length === 10) d = '1' + d;             // bare US number, same assumption as tel:
+    if (d.length >= 10 && d.length <= 15) return 'https://wa.me/' + d;
+  }
+  return '';
+}
+
 /* Static no-JS rendering for exports. iPhones preview HTML attachments with
    QuickLook, which does NOT run JavaScript — without this, volunteers saw a
    blank dark page. The export embeds a complete plain-HTML rendering of every
@@ -541,7 +597,12 @@ function buildStaticView(proj){
   var out = [];
   var imgCount = 0;
   function tel(ph){ return 'tel:+1' + String(ph || '').replace(/\D/g, ''); }
-  function phoneLink(ph){ return ph ? '<a href="' + tel(ph) + '">' + esc(ph) + '</a>' : ''; }
+  function phoneLink(ph, wa){
+    var out = ph ? '<a href="' + tel(ph) + '">' + esc(ph) + '</a>' : '';
+    var w = waLink(wa);
+    if (w) out += (out ? ' ' : '') + '<a class="wa" href="' + esc(w) + '">' + WA_ICON + 'WhatsApp</a>';
+    return out;
+  }
   function daysAllSame(perDay){
     if (p.event.days.length < 2) return true;
     var first = JSON.stringify((perDay && perDay[p.event.days[0].id]) || []);
@@ -574,7 +635,7 @@ function buildStaticView(proj){
         if (!(s.items || []).length) return;
         out.push('<div class="sv-sec">' + esc(s.title) + '</div><div class="sv-contacts">');
         s.items.forEach(function(c){
-          out.push('<div class="sv-row"><span><b>' + esc(c.name) + '</b>' + (c.role ? ' — ' + esc(c.role) : '') + '</span><span>' + phoneLink(c.phone) + '</span></div>');
+          out.push('<div class="sv-row"><span><b>' + esc(c.name) + '</b>' + (c.role ? ' — ' + esc(c.role) : '') + '</span><span>' + phoneLink(c.phone, c.wa) + '</span></div>');
         });
         out.push('</div>');
       }
@@ -595,7 +656,7 @@ function buildStaticView(proj){
         eachDay(s.perDay, function(list){
           out.push('<div class="sv-card"><div class="sv-card-b">');
           list.forEach(function(r){
-            out.push('<div class="sv-row"><span><b>' + esc(r.time) + '</b>&nbsp; ' + esc(r.name) + '</span><span>' + phoneLink(r.phone) + '</span></div>');
+            out.push('<div class="sv-row"><span><b>' + esc(r.time) + '</b>&nbsp; ' + esc(r.name) + '</span><span>' + phoneLink(r.phone, r.wa) + '</span></div>');
           });
           out.push('</div></div>');
         });
@@ -634,7 +695,7 @@ function buildStaticView(proj){
           out.push('<div class="sv-row" style="padding:5px 0"><span><b>' + esc(v.name) + '</b>' +
             (v.assignment ? '<br><span style="color:#667;font-size:13px">' + esc(v.assignment) + '</span>' : '') +
             (v.constraints ? '<br><i style="color:#996;font-size:12px">' + esc(v.constraints) + '</i>' : '') +
-            '</span><span>' + phoneLink(v.phone) + '</span></div>');
+            '</span><span>' + phoneLink(v.phone, v.wa) + '</span></div>');
         });
         out.push('</div></div>');
       }
@@ -740,8 +801,8 @@ function seedProject(){
         id: uid(), name: 'Parking', color: '#a46826',
         sections: [
           {id: uid(), type:'contacts', title:'Emergency / Leadership', items:[
-            {name:'Roland Pierce', role:'Parking Overseer', phone:'816-555-0110'},
-            {name:'Dexter Cole', role:'Assistant Overseer', phone:'816-555-0111'},
+            {name:'Roland Pierce', role:'Parking Overseer', phone:'816-555-0110', wa:'816-555-0110'},
+            {name:'Dexter Cole', role:'Assistant Overseer', phone:'816-555-0111', wa:'816-555-0111'},
             {name:'Harold Jenkins', role:'Pickup / Drop-off', phone:'816-555-0112'}]},
           {id: uid(), type:'roster', title:'Morning Lot Assignments (6:45–9:30 AM)',
             perDay: d3(clone(parkingLots), parkingSat)},
@@ -749,7 +810,7 @@ function seedProject(){
             perDay: d3(clone(parkingLots), clone(parkingSat))},
           {id: uid(), type:'schedule', title:'Security Rotation', perDay: {
             friday: [
-              {time:'9:30–11:00 AM', name:'Alan Booker', phone:'816-555-0101'},
+              {time:'9:30–11:00 AM', name:'Alan Booker', phone:'816-555-0101', wa:'816-555-0101'},
               {time:'11:00–12:30 PM', name:'Victor Ramos', phone:'816-555-0102'},
               {time:'12:30–2:00 PM', name:'Silas Monroe', phone:'816-555-0103'},
               {time:'2:00–3:30 PM', name:'Wade Turner', phone:'816-555-0104'}],
@@ -772,18 +833,18 @@ function seedProject(){
             {caption:'Lot 2 & 3 Flow', src: IMG_LOT23},
             {caption:'Vehicular Flow / Egress', src: IMG_VEHFLOW}]},
           {id: uid(), type:'directory', title:'Full Volunteer Directory', items:[
-            {name:'Alan Booker', phone:'816-555-0101', assignment:'Lot 1 Keyman', constraints:''},
+            {name:'Alan Booker', phone:'816-555-0101', wa:'816-555-0101', assignment:'Lot 1 Keyman', constraints:''},
             {name:'Andre Bishop', phone:'816-555-0109', assignment:'Pickup/Drop-off — east side', constraints:''},
             {name:'Colin Frost', phone:'816-555-0106', assignment:'Pickup/Drop-off — south side', constraints:''},
             {name:'Dean Holloway', phone:'816-555-0114', assignment:'Lot 1 Park', constraints:'Mornings only — leaves at noon.'},
             {name:'Felix Grant', phone:'816-555-0113', assignment:'Lot 2 Park', constraints:''},
-            {name:'Grant Ellison', phone:'816-555-0105', assignment:'Lot 1 Captain', constraints:''},
+            {name:'Grant Ellison', phone:'816-555-0105', wa:'816-555-0105', assignment:'Lot 1 Captain', constraints:''},
             {name:'Marcus Webb', phone:'816-555-0115', assignment:'Lot 1 Park', constraints:''},
             {name:'Neil Prescott', phone:'816-555-0107', assignment:'Lot 2 Captain', constraints:''},
             {name:'Omar Reyes', phone:'816-555-0108', assignment:'Lot 1 Direct', constraints:"Can't stand for long periods — rotate every hour."},
             {name:'Silas Monroe', phone:'816-555-0103', assignment:'Pickup/Drop-off Keyman', constraints:''},
             {name:'Trevor Lang', phone:'816-555-0116', assignment:'Lot 1 Direct', constraints:''},
-            {name:'Victor Ramos', phone:'816-555-0102', assignment:'Lot 2 Keyman', constraints:''},
+            {name:'Victor Ramos', phone:'816-555-0102', wa:'816-555-0155', assignment:'Lot 2 Keyman', constraints:''},
             {name:'Wade Turner', phone:'816-555-0104', assignment:'Lot 2 Park', constraints:''}]}
         ]
       },
@@ -791,7 +852,7 @@ function seedProject(){
         id: uid(), name: 'Cleaning', color: '#3f9e58',
         sections: [
           {id: uid(), type:'contacts', title:'Leadership', items:[
-            {name:'Stanley Burke', role:'Cleaning Overseer', phone:'816-555-0120'},
+            {name:'Stanley Burke', role:'Cleaning Overseer', phone:'816-555-0120', wa:'816-555-0120'},
             {name:'Miriam Holt', role:'Assistant Overseer', phone:'816-555-0121'}]},
           {id: uid(), type:'roster', title:'Zone Assignments', perDay: d3(clone(cleaningZones))},
           {id: uid(), type:'schedule', title:'Midday Touch-Up Rotation', perDay: d3([
@@ -817,7 +878,7 @@ function seedProject(){
         id: uid(), name: 'Stage', color: '#9c4ab0',
         sections: [
           {id: uid(), type:'contacts', title:'Leadership', items:[
-            {name:'Everett Shaw', role:'Stage Overseer', phone:'816-555-0130'},
+            {name:'Everett Shaw', role:'Stage Overseer', phone:'816-555-0130', wa:'816-555-0130'},
             {name:'Lionel Hayes', role:'Audio / Video', phone:'816-555-0131'}]},
           {id: uid(), type:'roster', title:'Platform & Sound Assignments', perDay: d3(clone(stagePosts))},
           {id: uid(), type:'schedule', title:'Session Coverage', perDay: d3([
@@ -842,7 +903,7 @@ function seedProject(){
         id: uid(), name: 'Seating', color: '#3f6bb0',
         sections: [
           {id: uid(), type:'contacts', title:'Leadership', items:[
-            {name:'Gordon Ferris', role:'Seating Overseer', phone:'816-555-0140'},
+            {name:'Gordon Ferris', role:'Seating Overseer', phone:'816-555-0140', wa:'816-555-0140'},
             {name:'Amos Kendall', role:'Assistant Overseer', phone:'816-555-0141'}]},
           {id: uid(), type:'roster', title:'Section Assignments', perDay: d3(clone(seatingSections))},
           {id: uid(), type:'notes', title:'Notes', byDay:false, perDayText:{},
@@ -1049,9 +1110,17 @@ function sanitizeSection(raw, dayMap, report){
     Object.keys(o).forEach(function(k){ if (typeof o[k] === 'string' && o[k].trim()) any = true; });
     return any;
   }
+  // WhatsApp values become clickable hrefs — keep only what waLink() accepts.
+  function cleanWa(v){
+    var s2 = cleanStr(v, 300);
+    if (!s2) return '';
+    if (!waLink(s2)) { report.badLinks++; return ''; }
+    return s2;
+  }
   if (type === 'contacts') {
     s.items = arr(raw.items).map(function(p){
-      return {name: cleanStr(p && p.name), role: cleanStr(p && p.role), phone: cleanStr(p && p.phone)};
+      return {name: cleanStr(p && p.name), role: cleanStr(p && p.role),
+              phone: cleanStr(p && p.phone), wa: cleanWa(p && p.wa)};
     }).filter(hasContent);
   } else if (type === 'roster') {
     s.perDay = mapDays(function(area){
@@ -1064,7 +1133,8 @@ function sanitizeSection(raw, dayMap, report){
   } else if (type === 'schedule') {
     s.perDay = mapDays(function(r){
       if (!r || typeof r !== 'object') return null;
-      var row = {time: cleanStr(r.time), name: cleanStr(r.name), phone: cleanStr(r.phone)};
+      var row = {time: cleanStr(r.time), name: cleanStr(r.name),
+                 phone: cleanStr(r.phone), wa: cleanWa(r.wa)};
       return hasContent(row) ? row : null;
     });
   } else if (type === 'notes') {
@@ -1082,7 +1152,7 @@ function sanitizeSection(raw, dayMap, report){
     });
   } else if (type === 'directory') {
     s.items = arr(raw.items).map(function(v){
-      return {name: cleanStr(v && v.name), phone: cleanStr(v && v.phone),
+      return {name: cleanStr(v && v.name), phone: cleanStr(v && v.phone), wa: cleanWa(v && v.wa),
               assignment: cleanStr(v && v.assignment, 500), constraints: cleanStr(v && v.constraints, 500)};
     }).filter(hasContent);
   }
@@ -1101,7 +1171,7 @@ function importGroupJson(file){
       return;
     }
     var dayMap = buildDayMap(raw.event && raw.event.days);
-    var report = {sections: 0, skipped: 0, daysDropped: 0, imagesToAttach: 0, badImages: 0};
+    var report = {sections: 0, skipped: 0, daysDropped: 0, imagesToAttach: 0, badImages: 0, badLinks: 0};
     var g = {
       id: uid(),
       name: cleanStr(raw.group.name) || 'Imported Group',
@@ -1135,6 +1205,7 @@ function importGroupJson(file){
     var msg = 'Imported "' + g.name + '" — ' + report.sections + ' section(s).';
     if (report.imagesToAttach) msg += '\n\n' + report.imagesToAttach + ' image placeholder(s) need images attached manually (group JSON files do not carry images).';
     if (report.badImages) msg += '\n' + report.badImages + ' image entry(ies) were removed because they were not valid embedded images.';
+    if (report.badLinks) msg += '\n' + report.badLinks + ' WhatsApp entry(ies) were removed because they were not a valid number or WhatsApp link.';
     if (report.skipped) msg += '\n' + report.skipped + ' unrecognized section(s) were skipped.';
     if (report.daysDropped) msg += '\n' + report.daysDropped + ' day list(s) did not match this event’s days and were dropped.';
     alert(msg);
@@ -1453,7 +1524,7 @@ function directoryPeople(){
       var key = (v.name || '').trim().toLowerCase();
       if (!key || seen[key]) return;
       seen[key] = true;
-      out.push({name: v.name.trim(), phone: v.phone || ''});
+      out.push({name: v.name.trim(), phone: v.phone || '', wa: v.wa || ''});
     });
   }); });
   out.sort(function(a, b){ return a.name.localeCompare(b.name); });
@@ -1474,18 +1545,45 @@ function lookupPerson(name){
   return hit;
 }
 
-function nameInput(obj, placeholder, flex, phoneInput){
+function nameInput(obj, placeholder, flex, contact){
   var inp = textInput(obj, 'name', placeholder, flex);
   inp.setAttribute('list', 'people-list');
   inp.setAttribute('autocomplete', 'off');
-  if (phoneInput) {
+  if (contact) {
     bind(inp, 'input', function(){
-      if ((obj.phone || '').trim()) return;   // never overwrite a typed phone
       var hit = lookupPerson(inp.value);
-      if (hit && hit.phone) { obj.phone = hit.phone; phoneInput.value = hit.phone; persist(); }
+      if (!hit) return;
+      // fill from the directory, but never overwrite something already typed
+      if (hit.phone && !(obj.phone || '').trim() && contact.phone) {
+        obj.phone = hit.phone; contact.phone.value = hit.phone;
+      }
+      if (hit.wa && !(obj.wa || '').trim() && contact.wa) {
+        obj.wa = hit.wa; contact.wa.value = hit.wa;
+      }
+      persist();
     });
   }
   return inp;
+}
+
+/* Phone + WhatsApp inputs, used by every editor that holds a contact so the
+   three stay identical. Returns the elements plus refs for name autocomplete.
+   The "=" button copies the phone into WhatsApp (the common case: same
+   number); leaving WhatsApp empty means the person has none and no WhatsApp
+   link is shown to volunteers. */
+function contactFields(obj, phoneFlex, waFlex){
+  var phone = textInput(obj, 'phone', 'Phone', phoneFlex || 1.4);
+  var wa = textInput(obj, 'wa', 'WhatsApp (number or link)', waFlex || 1.6);
+  var same = h('<button class="btn-mini" title="Use the same number for WhatsApp">=</button>');
+  bind(same, 'click', function(){
+    obj.wa = (obj.phone || '').trim();
+    wa.value = obj.wa;
+    persist();
+  });
+  return { phone: phone, wa: wa, same: same, els: [phone, wa, same] };
+}
+function appendContactFields(row, cf){
+  cf.els.forEach(function(el){ row.appendChild(el); });
 }
 
 function removeBtn(arr, i){
@@ -1519,15 +1617,15 @@ function renderSectionEditor(sec, si){
   if (sec.type === 'contacts') {
     sec.items.forEach(function(p, i){
       var r = h('<div class="row"></div>');
-      var contactPhone = textInput(p, 'phone', 'Phone', 1.4);
-      r.appendChild(nameInput(p, 'Name', 2, contactPhone));
-      r.appendChild(textInput(p, 'role', 'Role', 2));
-      r.appendChild(contactPhone);
+      var cf = contactFields(p, 1.4, 1.6);
+      r.appendChild(nameInput(p, 'Name', 2, cf));
+      r.appendChild(textInput(p, 'role', 'Role', 1.6));
+      appendContactFields(r, cf);
       r.appendChild(removeBtn(sec.items, i));
       body.appendChild(r);
     });
     var add = h('<button class="btn btn-ghost">+ Add contact</button>');
-    bind(add, 'click', function(){ sec.items.push({name:'', role:'', phone:''}); persist(); render(); });
+    bind(add, 'click', function(){ sec.items.push({name:'', role:'', phone:'', wa:''}); persist(); render(); });
     body.appendChild(add);
   }
 
@@ -1574,16 +1672,16 @@ function renderSectionEditor(sec, si){
     body.appendChild(h('<div class="muted" style="margin-bottom:10px">You are editing the day selected above. Start typing in a Name box to pick from the volunteer directory — the phone number fills in automatically.</div>'));
     rows.forEach(function(r0, i){
       var r = h('<div class="row"></div>');
-      var schedPhone = textInput(r0, 'phone', 'Phone', 1.3);
+      var cf = contactFields(r0, 1.3, 1.5);
       r.appendChild(textInput(r0, 'time', 'Time (e.g. 9:30–11:05 AM)', 1.5));
-      r.appendChild(nameInput(r0, 'Name', 1.6, schedPhone));
-      r.appendChild(schedPhone);
+      r.appendChild(nameInput(r0, 'Name', 1.6, cf));
+      appendContactFields(r, cf);
       r.appendChild(removeBtn(rows, i));
       body.appendChild(r);
     });
     var foot2 = h('<div style="display:flex;gap:8px;flex-wrap:wrap"></div>');
     var addR = h('<button class="btn btn-ghost">+ Add time slot</button>');
-    bind(addR, 'click', function(){ rows.push({time:'', name:'', phone:''}); persist(); render(); });
+    bind(addR, 'click', function(){ rows.push({time:'', name:'', phone:'', wa:''}); persist(); render(); });
     foot2.appendChild(addR);
     if (project.event.days.length > 1) foot2.appendChild(copyDayButton(sec, 'list'));
     body.appendChild(foot2);
@@ -1670,9 +1768,9 @@ function renderSectionEditor(sec, si){
       var card = h('<div class="subcard"><div class="subcard-body"></div></div>');
       var bd = card.querySelector('.subcard-body');
       var r1 = h('<div class="row"></div>');
-      var dirPhone = textInput(v, 'phone', 'Phone', 1.4);
-      r1.appendChild(nameInput(v, 'Name', 2, dirPhone));
-      r1.appendChild(dirPhone);
+      var cf = contactFields(v, 1.4, 1.6);
+      r1.appendChild(nameInput(v, 'Name', 2, cf));
+      appendContactFields(r1, cf);
       r1.appendChild(removeBtn(sec.items, i));
       bd.appendChild(r1);
       var r2 = h('<div class="row"></div>');
@@ -1685,7 +1783,7 @@ function renderSectionEditor(sec, si){
     });
     var addV = h('<button class="btn btn-ghost">+ Add volunteer</button>');
     bind(addV, 'click', function(){
-      sec.items.push({name:'', phone:'', assignment:'', constraints:''});
+      sec.items.push({name:'', phone:'', wa:'', assignment:'', constraints:''});
       persist(); render();
     });
     body.appendChild(addV);

@@ -203,6 +203,33 @@ Rules and invariants:
 substitute `__TITLE__` and `__PROJECT_JSON__` (function replacements) → download
 `"<event title> - Volunteer Info.html"`.
 
+## WhatsApp contacts
+
+Contacts, schedule rows, and directory entries each carry an optional `wa`
+alongside `phone`. On site volunteers often use WhatsApp because plain calls get
+ignored as spam, so the viewer shows a green **WhatsApp** pill beside the phone
+number and either can be tapped.
+
+- `wa` stores **what the editor typed** — a phone number in any formatting, or a
+  pasted WhatsApp URL. `waLink(raw)` converts it to a URL at render time
+  (10 digits get a `1` prefix, same US assumption as the `tel:` links).
+- **`waLink()` is a security boundary**: the result goes straight into an
+  `href`. Only `https://wa.me/…`, `https://api.whatsapp.com/…` and
+  `https://chat.whatsapp.com/…`, or a plain phone number, are accepted;
+  everything else returns `''` and nothing is rendered. Verified against
+  `javascript:`, `http:` (non-TLS), and lookalikes like `wa.me.evil.com`,
+  `evil.com/wa.me/`, `wa.me@evil.com`. Import runs the same check and reports
+  removals as `badLinks`. **The viewer re-validates independently** (`waHref`)
+  rather than trusting the exported JSON — keep both copies in sync.
+- **Empty means "no WhatsApp"** — never synthesize a link from the phone number,
+  because not everyone has an account and a wa.me link to a non-WhatsApp number
+  is a dead end. The `=` button in the editor is how "same number" is expressed.
+- `contactFields(obj, phoneFlex, waFlex)` builds the phone + WhatsApp + `=`
+  trio so all three editors stay identical; `nameInput` fills both fields from
+  the directory via autocomplete, never overwriting typed values.
+- The pill uses a **generic speech-bubble SVG**, not the WhatsApp mark, so the
+  repository carries no third-party logo.
+
 ## Group colors (any color, guaranteed readable)
 
 Groups store `color`: a plain `#rrggbb` string the user picks from 12 presets or

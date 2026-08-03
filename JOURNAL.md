@@ -2,6 +2,30 @@
 
 A dated log of changes. Newest entries at the top.
 
+## 2026-07-28 — WhatsApp contacts alongside phone numbers
+
+- Volunteers on site often reach each other over WhatsApp because plain calls
+  get ignored as spam. Contacts, schedule rows, and directory entries now carry
+  an optional `wa` field; the viewer shows a green **WhatsApp** pill next to the
+  phone number so either can be tapped. Works in the static no-JS view too, so
+  iPhone attachment previews get it as well.
+- Editors gained a "WhatsApp (number or link)" box plus a small `=` button that
+  copies the phone number across (the common case). **Empty means the person has
+  no WhatsApp** and no pill is shown — deliberately not auto-derived from the
+  phone, since a wa.me link to a non-WhatsApp number is a dead end.
+- Accepts a number in any formatting or a pasted wa.me / whatsapp.com link.
+  `waLink()` normalizes; 10-digit numbers get a `1` prefix (same US assumption
+  as the existing `tel:` links).
+- Security: the value lands in an `href`, so only wa.me / whatsapp.com URLs or
+  plain numbers are accepted — verified against `javascript:`, non-TLS `http:`,
+  and lookalike hosts (`wa.me.evil.com`, `evil.com/wa.me/`, `wa.me@evil.com`).
+  Import strips bad values and reports the count; the viewer re-validates rather
+  than trusting the exported JSON.
+- Name autocomplete now fills WhatsApp as well as phone from the directory,
+  correctly preserving a WhatsApp number that differs from the phone number.
+- Pill uses a generic speech-bubble icon, not the WhatsApp mark, so no
+  third-party logo ships in the repository.
+
 ## 2026-07-28 — Any-color group picker (schemaVersion 2)
 
 - Replaced the fixed 7-hue palette with a real color picker: 12 curated presets
