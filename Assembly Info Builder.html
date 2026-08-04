@@ -613,8 +613,42 @@ function waLink(raw){
    Image data lives only here — the app JSON gets "#simg-N" markers that the
    viewer resolves from these <img> tags at boot. Returns {html, project}
    where project is a deep copy with image srcs replaced by markers. */
+/* A person is entered once, in a directory. A schedule or contact row that has
+   no WhatsApp of its own inherits it from that person's directory entry, so
+   filling in the directory makes the button appear everywhere they are listed —
+   no retyping, and adding it later works retroactively. A value typed on the
+   row always wins. Matching is exact on the trimmed, case-insensitive name, and
+   this only ever touches the EXPORT copy: stored data is never rewritten behind
+   the editor's back. */
+function directoryWaMap(p){
+  var map = {};
+  (p.groups || []).forEach(function(g){ (g.sections || []).forEach(function(s){
+    if (s.type !== 'directory') return;
+    (s.items || []).forEach(function(v){
+      var k = String(v.name || '').trim().toLowerCase();
+      if (k && !map[k] && String(v.wa || '').trim()) map[k] = v.wa;
+    });
+  }); });
+  return map;
+}
+function resolveContactLinks(p){
+  var map = directoryWaMap(p);
+  function fill(row){
+    if (!row || String(row.wa || '').trim()) return;
+    var hit = map[String(row.name || '').trim().toLowerCase()];
+    if (hit) row.wa = hit;
+  }
+  (p.groups || []).forEach(function(g){ (g.sections || []).forEach(function(s){
+    if (s.type === 'contacts') (s.items || []).forEach(fill);
+    else if (s.type === 'schedule') {
+      Object.keys(s.perDay || {}).forEach(function(k){ (s.perDay[k] || []).forEach(fill); });
+    }
+  }); });
+}
+
 function buildStaticView(proj){
   var p = clone(proj);
+  resolveContactLinks(p);
   // Resolve each group's colors ONCE here; both the static markup below and the
   // exported app JSON read them, so the two renderings can never disagree.
   p.groups.forEach(function(g){ g.ui = groupUi(g); });
@@ -1595,9 +1629,21 @@ function nameInput(obj, placeholder, flex, contact){
    The "=" button copies the phone into WhatsApp (the common case: same
    number); leaving WhatsApp empty means the person has none and no WhatsApp
    link is shown to volunteers. */
-function contactFields(obj, phoneFlex, waFlex){
+function contactFields(obj, phoneFlex, waFlex, opts){
   var phone = textInput(obj, 'phone', 'Phone', phoneFlex || 1.4);
   var wa = textInput(obj, 'wa', 'WhatsApp (number or link)', waFlex || 1.6);
+  // Show when this row will inherit WhatsApp from the person's directory entry,
+  // so the behavior is visible rather than surprising. Not shown on directory
+  // rows themselves — that's where the value comes from.
+  if (!opts || !opts.isDirectory) {
+    if (!String(obj.wa || '').trim()) {
+      var hit = lookupPerson(obj.name);
+      if (hit && String(hit.wa || '').trim()) {
+        wa.placeholder = 'from directory: ' + hit.wa;
+        wa.title = 'This person has WhatsApp in the volunteer directory, so the button will show. Type here only to use a different number.';
+      }
+    }
+  }
   var same = h('<button class="btn-mini" title="Use the same number for WhatsApp">=</button>');
   bind(same, 'click', function(){
     obj.wa = (obj.phone || '').trim();
@@ -1693,7 +1739,7 @@ function renderSectionEditor(sec, si){
   else if (sec.type === 'schedule') {
     if (!sec.perDay[curDayId]) sec.perDay[curDayId] = [];
     var rows = sec.perDay[curDayId];
-    body.appendChild(h('<div class="muted" style="margin-bottom:10px">You are editing the day selected above. Start typing in a Name box to pick from the volunteer directory — the phone number fills in automatically.</div>'));
+    body.appendChild(h('<div class="muted" style="margin-bottom:10px">You are editing the day selected above. Start typing in a Name box to pick from the volunteer directory — the phone number fills in automatically. If that person has WhatsApp in the directory, volunteers get a WhatsApp button here too; only fill the WhatsApp box to use a <i>different</i> number.</div>'));
     rows.forEach(function(r0, i){
       var r = h('<div class="row"></div>');
       var cf = contactFields(r0, 1.3, 1.5);
@@ -1792,7 +1838,7 @@ function renderSectionEditor(sec, si){
       var card = h('<div class="subcard"><div class="subcard-body"></div></div>');
       var bd = card.querySelector('.subcard-body');
       var r1 = h('<div class="row"></div>');
-      var cf = contactFields(v, 1.4, 1.6);
+      var cf = contactFields(v, 1.4, 1.6, {isDirectory: true});
       r1.appendChild(nameInput(v, 'Name', 2, cf));
       appendContactFields(r1, cf);
       r1.appendChild(removeBtn(sec.items, i));

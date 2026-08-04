@@ -229,6 +229,15 @@ number and either can be tapped.
   the directory via autocomplete, never overwriting typed values.
 - The pill uses a **generic speech-bubble SVG**, not the WhatsApp mark, so the
   repository carries no third-party logo.
+- **Directory inheritance**: `resolveContactLinks()` (called from
+  `buildStaticView`, so it covers both renderings) fills any contacts or
+  schedule row that has no `wa` from that person's directory entry, matched on
+  the trimmed case-insensitive name across all groups' directories. A value
+  typed on the row always wins. It runs on the **export copy only** — stored
+  data is never rewritten behind the editor's back, so adding WhatsApp to the
+  directory later applies retroactively without touching existing rows. The
+  editor surfaces this as a `from directory: …` placeholder (suppressed on
+  directory rows, which are the source).
 
 ## Group colors (any color, guaranteed readable)
 

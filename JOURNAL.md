@@ -2,6 +2,29 @@
 
 A dated log of changes. Newest entries at the top.
 
+## 2026-07-28 — Schedules inherit WhatsApp from the directory
+
+- Schedules already rendered a WhatsApp button when the row carried a value, but
+  that meant retyping the number for every rotation slot. Now a contacts or
+  schedule row with no WhatsApp of its own **inherits it from that person's
+  volunteer-directory entry**, so entering it once in the directory makes the
+  button appear everywhere that person is listed — including retroactively for
+  rows created before the directory had it.
+- Implemented as `resolveContactLinks()` inside `buildStaticView`, so the
+  interactive viewer and the static no-JS view get identical results from one
+  code path, and it applies to the **export copy only** — the editor's stored
+  data is never rewritten behind their back.
+- A row's own value always wins, so a person can have a different WhatsApp
+  number in a specific slot. Matching is exact on the trimmed, case-insensitive
+  name across every group's directory.
+- The editor shows a `from directory: 816-555-0101` placeholder on rows that
+  will inherit, so the behavior is visible rather than magic; suppressed on
+  directory rows themselves since that is where the value comes from.
+- Verified in the demo: Alan Booker's directory WhatsApp now appears on the
+  Friday and Sunday rotation rows with nothing typed there, Victor Ramos
+  correctly shows his *different* WhatsApp number rather than his phone, and
+  people without WhatsApp still show no button. Static view count rose 9 → 12.
+
 ## 2026-07-28 — Swipe now moves between DAYS, not departments
 
 - Reported as "lost the ability to swipe left/right on Android". Investigated
