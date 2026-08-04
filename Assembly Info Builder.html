@@ -37,7 +37,8 @@
   .row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
   .chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .chip{display:flex;align-items:center;gap:4px;background:oklch(0.94 0.01 260);border-radius:8px;padding:4px 6px 4px 10px}
-  .chip input{border:none;background:transparent;padding:2px;width:90px;font-weight:600;font-size:13px}
+  .chip input[type=text]{border:none;background:transparent;padding:2px;width:105px;font-weight:600;font-size:13px}
+  .chip input[type=date]{border:none;background:transparent;padding:2px 4px;font-size:12px;color:var(--ink2);font-family:inherit}
   .grouptabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .gtab{border:none;border-radius:9px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;background:oklch(0.93 0.01 260);color:var(--ink2)}
   .gtab.active{color:#fff}
@@ -135,8 +136,11 @@
   .pills::-webkit-scrollbar{display:none}
   .pill{flex:none;border:1px solid oklch(0.42 0.03 260);background:oklch(0.28 0.03 260);color:oklch(0.8 0.02 260);border-radius:99px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
   .pill.active{color:#fff;border-color:transparent}
-  .daytabs{display:flex;max-width:640px;margin:0 auto;padding:0 16px}
-  .dtab{flex:1;border:none;background:transparent;color:oklch(0.7 0.02 260);font-size:14px;font-weight:600;padding:10px 4px;cursor:pointer;border-bottom:3px solid transparent}
+  /* Date labels are longer than "Friday", and an event can run Mon–Thu, so the
+     tab strip scrolls rather than crushing the text. */
+  .daytabs{display:flex;max-width:640px;margin:0 auto;padding:0 16px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .daytabs::-webkit-scrollbar{display:none}
+  .dtab{flex:1 0 auto;min-width:84px;white-space:nowrap;border:none;background:transparent;color:oklch(0.7 0.02 260);font-size:14px;font-weight:600;padding:10px 10px;cursor:pointer;border-bottom:3px solid transparent}
   .dtab.active{color:#fff;font-weight:700}
   .swiper{flex:1;min-height:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   .swiper::-webkit-scrollbar{display:none}
@@ -199,8 +203,21 @@
 (function(){
   var project = JSON.parse(document.getElementById('project-data').textContent);
   var ev = project.event, groups = project.groups, days = ev.days;
-  var curDay = days.length ? days[0].id : null;
   var curGroup = 0;
+
+  /* Open on today when today is one of the event's dates, otherwise the first
+     day. Built from local date parts, never toISOString(), which is UTC and
+     would show the wrong day for anyone west of Greenwich in the evening. */
+  var startDayIdx = 0;
+  (function(){
+    var n = new Date();
+    function p(v){ return (v < 10 ? '0' : '') + v; }
+    var today = n.getFullYear() + '-' + p(n.getMonth() + 1) + '-' + p(n.getDate());
+    for (var i = 0; i < days.length; i++) {
+      if (days[i] && days[i].date === today) { startDayIdx = i; return; }
+    }
+  })();
+  var curDay = days.length ? days[startDayIdx].id : null;
 
   // Image data lives ONCE, in the static view's <img> tags; the JSON carries
   // "#simg-N" markers. Resolve them, then drop the static view from the DOM.
@@ -464,6 +481,10 @@
 
   renderHeader();
   renderPanels();
+  // Jump to today's page once the swiper has a measured width.
+  if (startDayIdx > 0) {
+    requestAnimationFrame(function(){ scrollToDay(startDayIdx, false); });
+  }
 })();
 <\/script>
 </body>
@@ -585,6 +606,30 @@ function download(filename, text, mime){
   setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
 }
 function safeName(s){ return (s || 'Event').replace(/[\\/:*?"<>|]+/g, '').trim() || 'Event'; }
+
+/* ── Calendar dates on days ─────────────────────────────────────
+   A day may carry an ISO `date` ("2027-07-09") in addition to its `label`.
+   The date drives two things: the label is auto-written from it, and the
+   viewer opens on today's date when it matches one. Dates are handled in
+   LOCAL time throughout — `new Date("2027-07-09")` parses as UTC and can
+   land on the previous day west of Greenwich, so always build from parts. */
+var DOW_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var MON_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function normDate(s){ return /^\d{4}-\d{2}-\d{2}$/.test(String(s == null ? '' : s)) ? String(s) : ''; }
+function dateFromIso(iso){
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(normDate(iso));
+  if (!m) return null;
+  var d = new Date(+m[1], +m[2] - 1, +m[3]);
+  return isNaN(d.getTime()) ? null : d;
+}
+function isoFromDate(d){
+  function p(n){ return (n < 10 ? '0' : '') + n; }
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function formatDayLabel(iso){
+  var d = dateFromIso(iso);
+  return d ? DOW_SHORT[d.getDay()] + ', ' + MON_SHORT[d.getMonth()] + ' ' + d.getDate() : '';
+}
 
 /* ── WhatsApp links ────────────────────────────────────────────
    On site, volunteers often reach each other over WhatsApp because plain
@@ -852,9 +897,9 @@ function seedProject(){
       subtitle: 'Volunteer Reference',
       footer: 'Demo data — all names and phone numbers are fictional.\nFor internal volunteer use only.',
       days: [
-        {id:'friday', label:'Friday'},
-        {id:'saturday', label:'Saturday'},
-        {id:'sunday', label:'Sunday'}
+        {id:'friday', label:'Fri, Jul 9', date:'2027-07-09'},
+        {id:'saturday', label:'Sat, Jul 10', date:'2027-07-10'},
+        {id:'sunday', label:'Sun, Jul 11', date:'2027-07-11'}
       ]
     },
     groups: [
@@ -1121,7 +1166,7 @@ function exportGroupJson(){
     exportedAt: new Date().toISOString(),
     event: {
       title: project.event.title,
-      days: project.event.days.map(function(d){ return {id: d.id, label: d.label}; })
+      days: project.event.days.map(function(d){ return {id: d.id, label: d.label, date: normDate(d.date)}; })
     },
     group: share
   };
@@ -1146,6 +1191,16 @@ function buildDayMap(exportedDays){
     master.forEach(function(md){ if (!hit && !used[md.id] && md.id === ed.id) hit = md; });
     if (hit) { map[ed.id] = hit.id; used[hit.id] = true; }
   });
+  // A calendar date is a stronger match than a label — two files covering the
+  // same event agree on dates even when one says "Fri" and the other "Friday".
+  eds.forEach(function(ed){
+    if (map[ed.id]) return;
+    var dt = normDate(ed.date);
+    if (!dt) return;
+    var hit = null;
+    master.forEach(function(md){ if (!hit && !used[md.id] && normDate(md.date) === dt) hit = md; });
+    if (hit) { map[ed.id] = hit.id; used[hit.id] = true; }
+  });
   eds.forEach(function(ed){
     if (map[ed.id]) return;
     var lbl = String(ed.label || '').trim().toLowerCase();
@@ -1162,9 +1217,14 @@ function buildDayMap(exportedDays){
 }
 
 // Add a day to the event, giving every existing section an empty slot for it.
-function addEventDay(label){
+function addEventDay(label, date){
   var id = uid();
-  project.event.days.push({id: id, label: cleanStr(label) || 'Day'});
+  var iso = normDate(date);
+  project.event.days.push({
+    id: id,
+    label: cleanStr(label) || formatDayLabel(iso) || 'Day',
+    date: iso
+  });
   project.groups.forEach(function(g){ g.sections.forEach(function(s){
     if (s.perDay) s.perDay[id] = [];
     if (s.perDayText) s.perDayText[id] = '';
@@ -1264,7 +1324,7 @@ function importGroupJson(file){
         '\nCancel — treat them as the days you already have, matched in order');
       if (add) {
         dm.unmatched.forEach(function(ed){
-          dayMap[ed.id] = addEventDay(ed.label);
+          dayMap[ed.id] = addEventDay(ed.label, ed.date);
           report.daysAdded++;
         });
       } else {
@@ -1376,8 +1436,17 @@ function renderEventCard(){
   var chips = h('<div class="chips"></div>');
   project.event.days.forEach(function(d, di){
     var chip = h('<div class="chip"></div>');
-    var inp = h('<input type="text">');
+    var dt = h('<input type="date" title="Calendar date for this day">');
+    dt.value = normDate(d.date);
+    var inp = h('<input type="text" title="What volunteers see on the tab">');
     inp.value = d.label;
+    // Picking a date rewrites the label; the label can still be edited after.
+    bind(dt, 'input', function(){
+      d.date = normDate(dt.value);
+      var auto = formatDayLabel(d.date);
+      if (auto) { d.label = auto; inp.value = auto; }
+      persist();
+    });
     bind(inp, 'input', function(){ d.label = inp.value; persist(); });
     var x = h('<button class="btn-x" title="Remove day">&times;</button>');
     bind(x, 'click', function(){
@@ -1389,22 +1458,36 @@ function renderEventCard(){
       }); });
       persist(); render();
     });
-    chip.appendChild(inp); chip.appendChild(x); chips.appendChild(chip);
+    chip.appendChild(dt); chip.appendChild(inp); chip.appendChild(x); chips.appendChild(chip);
   });
   var add = h('<button class="btn-mini">+ Add day</button>');
   bind(add, 'click', function(){
-    var label = prompt('Name of the day (e.g. Saturday):', '');
-    if (!label) return;
-    var id = uid();
-    project.event.days.push({id:id, label:label});
-    project.groups.forEach(function(g){ g.sections.forEach(function(s){
-      if (s.perDay) s.perDay[id] = [];
-      if (s.perDayText) s.perDayText[id] = '';
-    }); });
+    var label = prompt('Name of the day (e.g. Saturday), or leave blank and set its date after:', '');
+    if (label === null) return;
+    addEventDay(label || 'New day', '');
     persist(); render();
   });
   chips.appendChild(add);
-  dayField.appendChild(chips); c.appendChild(dayField);
+
+  // Most events run on consecutive days, so filling the rest beats picking
+  // each date by hand.
+  var fill = h('<button class="btn-mini" title="Give every following day the next calendar date">Fill dates from the first day</button>');
+  bind(fill, 'click', function(){
+    var first = dateFromIso(project.event.days[0] && project.event.days[0].date);
+    if (!first) { alert('Set the date on the first day, then press this to fill the rest with consecutive dates.'); return; }
+    project.event.days.forEach(function(d, i){
+      if (i === 0) return;
+      var nd = new Date(first.getFullYear(), first.getMonth(), first.getDate() + i);
+      d.date = isoFromDate(nd);
+      d.label = formatDayLabel(d.date) || d.label;
+    });
+    persist(); render();
+  });
+  chips.appendChild(fill);
+
+  dayField.appendChild(chips);
+  dayField.appendChild(h('<div class="muted" style="margin-top:6px">Give each day its calendar date. The tab label is written from the date automatically — you can still edit it. When a volunteer opens the file <b>on</b> one of these dates, it opens to that day.</div>'));
+  c.appendChild(dayField);
   return c;
 }
 

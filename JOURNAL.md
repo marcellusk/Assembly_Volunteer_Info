@@ -2,6 +2,30 @@
 
 A dated log of changes. Newest entries at the top.
 
+## 2026-08-03 — Calendar dates on days; viewer opens on today
+
+- Days now carry an optional ISO `date` alongside their label. The builder gives
+  each day a date picker; **picking a date writes the label** ("Fri, Jul 9") and
+  the label stays editable afterwards. A "Fill dates from the first day" button
+  gives the remaining days consecutive dates, since most events run back to back.
+- **The exported file opens on today.** If the device's date matches one of the
+  event's dates, the viewer starts on that day's page (header and swiper both);
+  otherwise it starts on the first day, exactly as before.
+- **All date handling is local-time.** `new Date("2027-07-09")` parses as UTC and
+  `toISOString()` reports UTC, either of which shows the wrong day west of
+  Greenwich in the evening — precisely when volunteers check the schedule.
+  Dates are built from `getFullYear/getMonth/getDate` and parsed via
+  `new Date(y, m-1, d)` throughout. Regression-tested at 11:30 PM Sunday in
+  America/Chicago (04:30 UTC Monday): still opens on Sunday.
+- Import now matches days **by date before label**, so two files covering the
+  same event agree even when one says "Fri" and the other "Friday". Days added
+  during import carry their date across.
+- Day tabs scroll horizontally and no longer shrink, since date labels are
+  longer than "Friday" and an event can run Monday–Thursday.
+- Backward compatible: days without a date behave exactly as before (no
+  auto-open, label shown as typed). Demo seed and the Lunch Delivery example
+  were given real dates.
+
 ## 2026-08-03 — Import can add days the event doesn't have; Lunch Delivery example
 
 - Added `Lunch Delivery - group.json`, a fictional example import covering a

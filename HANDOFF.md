@@ -299,6 +299,25 @@ Exports therefore contain BOTH renderings:
   (`page.setJavaScriptEnabled(false)` in puppeteer) — that IS the iPhone
   attachment-preview experience.
 
+## Calendar dates on days
+
+`event.days[i]` may carry `date` as an ISO `YYYY-MM-DD` string alongside `label`.
+It is optional — days without one behave exactly as they always did.
+
+- **Always use local time.** `new Date("2027-07-09")` parses as **UTC** and
+  `toISOString()` emits UTC; either shows the wrong day west of Greenwich during
+  the evening, which is exactly when volunteers check the schedule. Build ISO
+  strings from `getFullYear/getMonth/getDate` (`isoFromDate`) and parse via
+  `new Date(y, m-1, d)` (`dateFromIso`). The viewer has its own inlined copy of
+  this for the same reason — keep both local-time. Regression case: 11:30 PM
+  Sunday in America/Chicago is Monday in UTC and must still resolve to Sunday.
+- The builder's date picker **overwrites the label** via `formatDayLabel()`;
+  the label remains free text afterwards, so a custom label survives until the
+  date changes again.
+- The viewer computes `startDayIdx` at boot and scrolls to that page on the
+  first animation frame (the swiper needs a measured width first).
+- Import matches days by id → **date** → label, then asks about leftovers.
+
 ## Navigation axes (swipe = days, tap = departments)
 
 **One `.panel` per DAY of the current department**, not one per department.

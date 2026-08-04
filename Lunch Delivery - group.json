@@ -6,10 +6,10 @@
   "event": {
     "title": "Assembly Hall Work Week",
     "days": [
-      { "id": "monday", "label": "Monday" },
-      { "id": "tuesday", "label": "Tuesday" },
-      { "id": "wednesday", "label": "Wednesday" },
-      { "id": "thursday", "label": "Thursday" }
+      { "id": "monday",    "label": "Mon, Jun 7",  "date": "2027-06-07" },
+      { "id": "tuesday",   "label": "Tue, Jun 8",  "date": "2027-06-08" },
+      { "id": "wednesday", "label": "Wed, Jun 9",  "date": "2027-06-09" },
+      { "id": "thursday",  "label": "Thu, Jun 10", "date": "2027-06-10" }
     ]
   },
   "group": {
