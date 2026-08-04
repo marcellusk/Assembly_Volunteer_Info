@@ -16,6 +16,9 @@
 docs/*
 !docs/screenshots/
 !docs/screenshots/*.png
+# Example captain-import file, fictional data only. Named exactly — do NOT
+# whitelist "*group.json", which would sweep in real department exports.
+!Lunch Delivery - group.json
 
 # ── Never whitelist (reminder for future contributors) ──────────────
 # Parking Info - standalone*.html   → real names & phone numbers

@@ -1,0 +1,228 @@
+{
+  "format": "assembly-info-group",
+  "schemaVersion": 2,
+  "exportedAt": "2026-08-03T12:00:00",
+  "_comment": "DEMO FILE - all names and phone numbers are fictional (555-01xx). Covers a Monday-Thursday work week. Import with the 'Import group JSON' button; when asked, choose OK to add Monday-Thursday as their own days.",
+  "event": {
+    "title": "Assembly Hall Work Week",
+    "days": [
+      { "id": "monday", "label": "Monday" },
+      { "id": "tuesday", "label": "Tuesday" },
+      { "id": "wednesday", "label": "Wednesday" },
+      { "id": "thursday", "label": "Thursday" }
+    ]
+  },
+  "group": {
+    "name": "Lunch Delivery",
+    "color": "#c0562f",
+    "sections": [
+      {
+        "type": "contacts",
+        "title": "Lunch Delivery — Leadership",
+        "items": [
+          { "name": "Warren Ashby", "role": "Lunch Delivery Overseer", "phone": "816-555-0201", "wa": "816-555-0201" },
+          { "name": "Priscilla Vance", "role": "Assistant Overseer", "phone": "816-555-0202", "wa": "816-555-0202" },
+          { "name": "Gerald Sunderland", "role": "Kitchen Coordinator", "phone": "816-555-0203", "wa": "816-555-0288" }
+        ]
+      },
+      {
+        "type": "roster",
+        "title": "Daily Assignments",
+        "perDay": {
+          "monday": [
+            {
+              "name": "Bringing Dishes — Menu: Pasta & Salad",
+              "people": [
+                { "name": "Marisol Reyna", "role": "Baked ziti — 2 large pans" },
+                { "name": "Dwight Camden", "role": "Caesar salad — serves 40" },
+                { "name": "Beatrice Olamide", "role": "Garlic bread — 6 loaves" },
+                { "name": "Coretta Blanchard", "role": "Brownies — 4 dozen" },
+                { "name": "Nathaniel Frost", "role": "Lemonade & iced tea — 5 gal each" }
+              ]
+            },
+            {
+              "name": "Serving Team",
+              "people": [
+                { "name": "Delia Marchetti", "role": "Serving line captain" },
+                { "name": "Tobias Lindqvist", "role": "Main dish station" },
+                { "name": "Saoirse Kelleher", "role": "Salad & bread" }
+              ]
+            },
+            {
+              "name": "Cleanup Crew",
+              "people": [
+                { "name": "Yolanda Pruitt", "role": "Crew captain" },
+                { "name": "Curtis Hallowell", "role": "Tables & floor" },
+                { "name": "Anneke Vos", "role": "Dishes & kitchen" }
+              ]
+            }
+          ],
+          "tuesday": [
+            {
+              "name": "Bringing Dishes — Menu: Taco Bar",
+              "people": [
+                { "name": "Coretta Blanchard", "role": "Seasoned ground beef — 10 lbs" },
+                { "name": "Hollis Nakamura", "role": "Spanish rice — 2 pans" },
+                { "name": "Imani Whitfield", "role": "Refried beans — 2 pans" },
+                { "name": "Rupert Castellano", "role": "Tortillas, cheese & toppings tray" },
+                { "name": "Marisol Reyna", "role": "Tres leches cake" },
+                { "name": "Nathaniel Frost", "role": "Horchata & water — 5 gal each" }
+              ]
+            },
+            {
+              "name": "Serving Team",
+              "people": [
+                { "name": "Emmanuel Boateng", "role": "Serving line captain" },
+                { "name": "Delia Marchetti", "role": "Taco bar" },
+                { "name": "Tobias Lindqvist", "role": "Sides & drinks" }
+              ]
+            },
+            {
+              "name": "Cleanup Crew",
+              "people": [
+                { "name": "Anneke Vos", "role": "Crew captain" },
+                { "name": "Ramona Escalante", "role": "Tables & floor" },
+                { "name": "Curtis Hallowell", "role": "Trash & recycling" }
+              ]
+            }
+          ],
+          "wednesday": [
+            {
+              "name": "Bringing Dishes — Menu: Soup & Sandwich",
+              "people": [
+                { "name": "Beatrice Olamide", "role": "Chicken noodle soup — 3 gal" },
+                { "name": "Marisol Reyna", "role": "Vegetable beef soup — 3 gal" },
+                { "name": "Dwight Camden", "role": "Sandwich platter — 60 halves" },
+                { "name": "Hollis Nakamura", "role": "Chips, pickles & fruit tray" },
+                { "name": "Imani Whitfield", "role": "Cookies — 5 dozen" },
+                { "name": "Nathaniel Frost", "role": "Coffee & lemonade" }
+              ]
+            },
+            {
+              "name": "Serving Team",
+              "people": [
+                { "name": "Saoirse Kelleher", "role": "Serving line captain" },
+                { "name": "Emmanuel Boateng", "role": "Soup station" },
+                { "name": "Delia Marchetti", "role": "Sandwiches & sides" }
+              ]
+            },
+            {
+              "name": "Cleanup Crew",
+              "people": [
+                { "name": "Yolanda Pruitt", "role": "Crew captain" },
+                { "name": "Anneke Vos", "role": "Tables & floor" },
+                { "name": "Ramona Escalante", "role": "Dishes & kitchen" }
+              ]
+            }
+          ],
+          "thursday": [
+            {
+              "name": "Bringing Dishes — Menu: BBQ (last day)",
+              "people": [
+                { "name": "Rupert Castellano", "role": "Pulled pork — 15 lbs" },
+                { "name": "Coretta Blanchard", "role": "Coleslaw — large bowl" },
+                { "name": "Imani Whitfield", "role": "Baked beans — 2 pans" },
+                { "name": "Dwight Camden", "role": "Buns, pickles & condiments" },
+                { "name": "Marisol Reyna", "role": "Sheet cake — thank-you cake" },
+                { "name": "Nathaniel Frost", "role": "Iced tea & bottled water" }
+              ]
+            },
+            {
+              "name": "Serving Team",
+              "people": [
+                { "name": "Delia Marchetti", "role": "Serving line captain" },
+                { "name": "Tobias Lindqvist", "role": "Meat station" },
+                { "name": "Saoirse Kelleher", "role": "Sides" },
+                { "name": "Emmanuel Boateng", "role": "Drinks & dessert" }
+              ]
+            },
+            {
+              "name": "Cleanup Crew",
+              "people": [
+                { "name": "Curtis Hallowell", "role": "Crew captain" },
+                { "name": "Yolanda Pruitt", "role": "Kitchen breakdown" },
+                { "name": "Anneke Vos", "role": "Tables & floor" },
+                { "name": "Ramona Escalante", "role": "Final walkthrough & lost items" }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "type": "schedule",
+        "title": "Kitchen Timeline",
+        "perDay": {
+          "monday": [
+            { "time": "10:30 AM", "name": "Gerald Sunderland", "phone": "816-555-0203" },
+            { "time": "11:00 AM", "name": "Delia Marchetti", "phone": "816-555-0210" },
+            { "time": "11:45 AM", "name": "Warren Ashby", "phone": "816-555-0201" },
+            { "time": "1:00 PM", "name": "Yolanda Pruitt", "phone": "816-555-0214" }
+          ],
+          "tuesday": [
+            { "time": "10:30 AM", "name": "Gerald Sunderland", "phone": "816-555-0203" },
+            { "time": "11:00 AM", "name": "Emmanuel Boateng", "phone": "816-555-0213" },
+            { "time": "11:45 AM", "name": "Warren Ashby", "phone": "816-555-0201" },
+            { "time": "1:00 PM", "name": "Anneke Vos", "phone": "816-555-0216" }
+          ],
+          "wednesday": [
+            { "time": "10:30 AM", "name": "Gerald Sunderland", "phone": "816-555-0203" },
+            { "time": "11:00 AM", "name": "Saoirse Kelleher", "phone": "816-555-0212" },
+            { "time": "11:45 AM", "name": "Priscilla Vance", "phone": "816-555-0202" },
+            { "time": "1:00 PM", "name": "Yolanda Pruitt", "phone": "816-555-0214" }
+          ],
+          "thursday": [
+            { "time": "10:15 AM", "name": "Gerald Sunderland", "phone": "816-555-0203" },
+            { "time": "11:00 AM", "name": "Delia Marchetti", "phone": "816-555-0210" },
+            { "time": "11:45 AM", "name": "Warren Ashby", "phone": "816-555-0201" },
+            { "time": "1:15 PM", "name": "Curtis Hallowell", "phone": "816-555-0215" }
+          ]
+        }
+      },
+      {
+        "type": "notes",
+        "title": "Notes",
+        "byDay": true,
+        "text": "",
+        "perDayText": {
+          "monday": "Menu: Pasta & Salad. Hot dishes should arrive by 10:45 AM so they can go straight into the warmers — please label your pan with your name and mark anything vegetarian. Serving starts at 11:45 AM.",
+          "tuesday": "Menu: Taco Bar. Keep meat and toppings in separate containers. We have two brothers with a nut allergy this week, so please list every ingredient on a card next to your dish.",
+          "wednesday": "Menu: Soup & Sandwich. Soups need to arrive hot in crock pots if possible — outlets are along the north kitchen wall. Sandwiches can come cold and go into the refrigerator.",
+          "thursday": "Menu: BBQ, and the last day. Please take your pans and dishes home with you — anything left after 2:00 PM goes to the lost-items table. Thank you all for a great week!"
+        }
+      },
+      {
+        "type": "images",
+        "title": "Kitchen Layout",
+        "items": [
+          { "caption": "Kitchen & warmer layout", "src": "" },
+          { "caption": "Serving line diagram", "src": "" }
+        ]
+      },
+      {
+        "type": "directory",
+        "title": "Lunch Delivery Volunteers",
+        "items": [
+          { "name": "Anneke Vos", "phone": "816-555-0216", "wa": "816-555-0216", "assignment": "Cleanup Crew", "constraints": "" },
+          { "name": "Beatrice Olamide", "phone": "816-555-0206", "wa": "816-555-0206", "assignment": "Bringing Dishes — soups & breads", "constraints": "Cannot lift heavy pans — needs help carrying in." },
+          { "name": "Coretta Blanchard", "phone": "816-555-0207", "wa": "", "assignment": "Bringing Dishes — mains & sides", "constraints": "" },
+          { "name": "Curtis Hallowell", "phone": "816-555-0215", "wa": "816-555-0215", "assignment": "Cleanup Crew", "constraints": "" },
+          { "name": "Delia Marchetti", "phone": "816-555-0210", "wa": "816-555-0210", "assignment": "Serving line captain", "constraints": "" },
+          { "name": "Dwight Camden", "phone": "816-555-0205", "wa": "816-555-0205", "assignment": "Bringing Dishes — salads & platters", "constraints": "" },
+          { "name": "Emmanuel Boateng", "phone": "816-555-0213", "wa": "816-555-0213", "assignment": "Serving Team", "constraints": "Available Tuesday through Thursday only." },
+          { "name": "Gerald Sunderland", "phone": "816-555-0203", "wa": "816-555-0288", "assignment": "Kitchen Coordinator", "constraints": "" },
+          { "name": "Hollis Nakamura", "phone": "816-555-0208", "wa": "", "assignment": "Bringing Dishes — sides", "constraints": "" },
+          { "name": "Imani Whitfield", "phone": "816-555-0209", "wa": "816-555-0209", "assignment": "Bringing Dishes — sides & desserts", "constraints": "" },
+          { "name": "Marisol Reyna", "phone": "816-555-0204", "wa": "816-555-0204", "assignment": "Bringing Dishes — mains & desserts", "constraints": "" },
+          { "name": "Nathaniel Frost", "phone": "816-555-0217", "wa": "816-555-0217", "assignment": "Bringing Dishes — all drinks & ice", "constraints": "Arrives by 10:15 AM with the drink coolers." },
+          { "name": "Priscilla Vance", "phone": "816-555-0202", "wa": "816-555-0202", "assignment": "Assistant Overseer", "constraints": "" },
+          { "name": "Ramona Escalante", "phone": "816-555-0218", "wa": "", "assignment": "Cleanup Crew", "constraints": "" },
+          { "name": "Rupert Castellano", "phone": "816-555-0219", "wa": "816-555-0219", "assignment": "Bringing Dishes — mains", "constraints": "" },
+          { "name": "Saoirse Kelleher", "phone": "816-555-0212", "wa": "816-555-0212", "assignment": "Serving Team", "constraints": "" },
+          { "name": "Tobias Lindqvist", "phone": "816-555-0211", "wa": "816-555-0211", "assignment": "Serving Team", "constraints": "" },
+          { "name": "Warren Ashby", "phone": "816-555-0201", "wa": "816-555-0201", "assignment": "Lunch Delivery Overseer", "constraints": "" },
+          { "name": "Yolanda Pruitt", "phone": "816-555-0214", "wa": "816-555-0214", "assignment": "Cleanup crew captain", "constraints": "" }
+        ]
+      }
+    ]
+  }
+}

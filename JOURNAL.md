@@ -2,6 +2,31 @@
 
 A dated log of changes. Newest entries at the top.
 
+## 2026-08-03 — Import can add days the event doesn't have; Lunch Delivery example
+
+- Added `Lunch Delivery - group.json`, a fictional example import covering a
+  **Monday–Thursday** work week: dish assignments (each person's row carries the
+  actual dish in the role field), serving teams, cleanup crews, a kitchen
+  timeline, per-day menu notes, image placeholders, and a 19-person directory.
+  Doubles as documentation of the group-JSON format for other tools.
+- **Import now handles days the event doesn't have.** Previously unmatched days
+  fell back to positional matching, so a Mon–Thu file dropped into a Fri–Sun
+  event silently landed Monday's data on Friday. `buildDayMap()` now returns
+  unmatched days instead of guessing, and the import asks: add them as their own
+  days, or match them in order to the existing ones. Adding a day also gives
+  every existing section an empty slot for it (`addEventDay`).
+  - Verified: Mon–Thu into a Fri–Sun event with "add" produces 7 days with data
+    intact; a captain file that merely renamed days (Fri/Sat/Sun) with "match in
+    order" maps correctly and adds nothing; exact label matches
+    (case-insensitive) never prompt at all.
+- Schedule rows wrap to a second line when they carry both a phone number and a
+  WhatsApp button, instead of squeezing the name — noticed while reviewing the
+  Lunch Delivery preview on a phone-width viewport.
+- Confirmed the section types cover this shape without changes: a roster's areas
+  work as "Bringing Dishes / Serving Team / Cleanup Crew" and the role field
+  carries "Baked ziti — 2 large pans". Schedule rows inherited WhatsApp from the
+  directory automatically (28 buttons across the four days, none typed twice).
+
 ## 2026-07-28 — Schedules inherit WhatsApp from the directory
 
 - Schedules already rendered a WhatsApp button when the row carried a value, but

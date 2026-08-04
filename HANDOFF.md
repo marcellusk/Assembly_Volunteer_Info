@@ -188,8 +188,16 @@ Rules and invariants:
   unvalidated `"… onerror=…"` string would be XSS in a file distributed to every
   volunteer.
 - **Day mapping** (`buildDayMap`): exported day → master day by id, then by
-  trimmed case-insensitive label, then positionally for leftovers. Data for days
-  that still don't map is dropped and counted in the import summary.
+  trimmed case-insensitive label. Anything still unmatched is **returned, not
+  guessed at**, because the two sensible outcomes are opposites: a file covering
+  genuinely different days (a Mon–Thu lunch group imported into a Fri–Sun event)
+  wants those days *added*, while a file that merely relabelled the same days
+  wants them matched *in order*. `importGroupJson` asks the user which, and
+  `addEventDay()` gives every existing section an empty slot for a new day.
+  Do not restore silent positional fallback — it landed Monday's data on Friday.
+- `Lunch Delivery - group.json` in the repo root is a fictional example of the
+  format (Mon–Thu, dish/serving/cleanup rosters, per-day notes, image
+  placeholders). Useful as a fixture when testing import changes.
 - **Name collision**: importing a group whose name matches an existing group
   (case-insensitive) prompts replace-or-keep-both. All ids (group + sections) are
   regenerated on import.

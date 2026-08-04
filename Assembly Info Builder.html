@@ -154,10 +154,13 @@
   .prow{display:flex;justify-content:space-between;gap:8px;font-size:14px;line-height:1.4}
   .prow .r{color:oklch(0.5 0.01 260);text-align:right}
   .schedbox{border:1px solid oklch(0.9 0.005 260);border-radius:10px;overflow:hidden;background:#fff}
-  .srow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;font-size:14px;border-top:1px solid oklch(0.94 0.005 260)}
+  /* Wraps to a second line when a row carries a phone AND a WhatsApp button,
+     rather than squeezing the name — the links stay right-aligned either way. */
+  .srow{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:2px 8px;padding:10px 14px;font-size:14px;border-top:1px solid oklch(0.94 0.005 260)}
   .srow:first-child{border-top:none}
   .srow .t{font-weight:600;color:oklch(0.4 0.14 45);white-space:nowrap;font-size:13px}
-  .srow .n{flex:1;text-align:right}
+  .srow .n{flex:1 1 auto;text-align:right;min-width:0}
+  .srow .links{margin-left:auto}
   .srow a{font-size:13px;white-space:nowrap}
   .notesbox{background:oklch(0.95 0.03 90);border:1px solid oklch(0.85 0.05 90);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.55;color:oklch(0.35 0.03 90);white-space:pre-wrap}
   .imggrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -1127,25 +1130,46 @@ function exportGroupJson(){
     (stripped ? '\n\nNote: ' + stripped + ' image(s) were NOT included — images must be attached manually in the master.' : ''));
 }
 
+/* Match the file's days to this event's days: same id first, then same label
+   (case-insensitive, so a captain who renamed "Friday" still lands right).
+   Anything still unmatched is returned rather than guessed at, because the two
+   sensible outcomes are opposites: a file covering DIFFERENT days (a Mon–Thu
+   lunch group dropped into a Fri–Sun event) wants those days ADDED, while a
+   file that merely relabelled the same days wants them matched in order. The
+   caller asks. */
 function buildDayMap(exportedDays){
-  // match exported day ids to this event's days: same id first, then same
-  // label (case-insensitive), then by position for whatever is left
   var master = project.event.days;
   var used = {}, map = {};
-  arr(exportedDays).forEach(function(ed){
-    if (!ed) return;
+  var eds = arr(exportedDays).filter(function(ed){ return ed && ed.id; });
+  eds.forEach(function(ed){
     var hit = null;
     master.forEach(function(md){ if (!hit && !used[md.id] && md.id === ed.id) hit = md; });
-    if (!hit) {
-      var lbl = String(ed.label || '').trim().toLowerCase();
-      if (lbl) master.forEach(function(md){ if (!hit && !used[md.id] && md.label.trim().toLowerCase() === lbl) hit = md; });
-    }
     if (hit) { map[ed.id] = hit.id; used[hit.id] = true; }
   });
-  var pending = arr(exportedDays).filter(function(ed){ return ed && !map[ed.id]; });
-  var free = master.filter(function(md){ return !used[md.id]; });
-  pending.forEach(function(ed, i){ if (free[i]) map[ed.id] = free[i].id; });
-  return map;
+  eds.forEach(function(ed){
+    if (map[ed.id]) return;
+    var lbl = String(ed.label || '').trim().toLowerCase();
+    if (!lbl) return;
+    var hit = null;
+    master.forEach(function(md){ if (!hit && !used[md.id] && md.label.trim().toLowerCase() === lbl) hit = md; });
+    if (hit) { map[ed.id] = hit.id; used[hit.id] = true; }
+  });
+  return {
+    map: map,
+    unmatched: eds.filter(function(ed){ return !map[ed.id]; }),
+    free: master.filter(function(md){ return !used[md.id]; })
+  };
+}
+
+// Add a day to the event, giving every existing section an empty slot for it.
+function addEventDay(label){
+  var id = uid();
+  project.event.days.push({id: id, label: cleanStr(label) || 'Day'});
+  project.groups.forEach(function(g){ g.sections.forEach(function(s){
+    if (s.perDay) s.perDay[id] = [];
+    if (s.perDayText) s.perDayText[id] = '';
+  }); });
+  return id;
 }
 
 function sanitizeSection(raw, dayMap, report){
@@ -1228,8 +1252,25 @@ function importGroupJson(file){
       alert('That file is not a group export from this app.\n\nAsk the captain to use the “Export group JSON” button and send you the downloaded .json file.');
       return;
     }
-    var dayMap = buildDayMap(raw.event && raw.event.days);
-    var report = {sections: 0, skipped: 0, daysDropped: 0, imagesToAttach: 0, badImages: 0, badLinks: 0};
+    var report = {sections: 0, skipped: 0, daysDropped: 0, daysAdded: 0, imagesToAttach: 0, badImages: 0, badLinks: 0};
+    var dm = buildDayMap(raw.event && raw.event.days);
+    var dayMap = dm.map;
+    if (dm.unmatched.length) {
+      var incoming = dm.unmatched.map(function(d){ return cleanStr(d.label) || 'Day'; }).join(', ');
+      var existing = project.event.days.map(function(d){ return d.label; }).join(', ') || '(none)';
+      var add = confirm('This file covers day(s) that are not in your event yet:\n    ' + incoming +
+        '\n\nYour event currently has:\n    ' + existing +
+        '\n\nOK — add ' + incoming + ' to the event (keeps them as their own days)' +
+        '\nCancel — treat them as the days you already have, matched in order');
+      if (add) {
+        dm.unmatched.forEach(function(ed){
+          dayMap[ed.id] = addEventDay(ed.label);
+          report.daysAdded++;
+        });
+      } else {
+        dm.unmatched.forEach(function(ed, i){ if (dm.free[i]) dayMap[ed.id] = dm.free[i].id; });
+      }
+    }
     var g = {
       id: uid(),
       name: cleanStr(raw.group.name) || 'Imported Group',
@@ -1261,6 +1302,7 @@ function importGroupJson(file){
     }
     persist(); render();
     var msg = 'Imported "' + g.name + '" — ' + report.sections + ' section(s).';
+    if (report.daysAdded) msg += '\n' + report.daysAdded + ' new day(s) were added to the event.';
     if (report.imagesToAttach) msg += '\n\n' + report.imagesToAttach + ' image placeholder(s) need images attached manually (group JSON files do not carry images).';
     if (report.badImages) msg += '\n' + report.badImages + ' image entry(ies) were removed because they were not valid embedded images.';
     if (report.badLinks) msg += '\n' + report.badLinks + ' WhatsApp entry(ies) were removed because they were not a valid number or WhatsApp link.';
