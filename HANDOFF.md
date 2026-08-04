@@ -282,6 +282,32 @@ Exports therefore contain BOTH renderings:
   (`page.setJavaScriptEnabled(false)` in puppeteer) — that IS the iPhone
   attachment-preview experience.
 
+## Navigation axes (swipe = days, tap = departments)
+
+**One `.panel` per DAY of the current department**, not one per department.
+Horizontal swipe therefore moves Friday → Saturday → Sunday, which is the axis
+volunteers actually move along; departments are chosen from the pill bar, which
+rebuilds the day pages and keeps the day you were on (`setGroup`).
+
+This was changed after the project owner — who built the file — reported "losing"
+swipe on Android: nothing was broken, swipe was simply bound to departments while
+everyone expected days. It also fixes single-department files, where department
+swiping had nothing to move to.
+
+Consequences to keep in mind when editing the viewer:
+
+- `renderSection(sec, gi, dayId)` takes the day **explicitly**; it must never
+  read the global `curDay`, because sibling pages render other days.
+- Sections that aren't per-day (contacts, images, directory) repeat on every day
+  page. Viewer images therefore carry `loading="lazy" decoding="async"` so
+  off-screen day pages don't decode the same maps again — important on older
+  iPhones with large map sets.
+- `uiState` (directory open/search) is keyed by **group**, so the directory
+  stays open across that department's day pages.
+- Panels carry `data-di` (day index). The scroll listener maps scroll position
+  to a day and re-renders the header only.
+- The static no-JS view is unaffected — it renders every day inline already.
+
 ## Viewer behavior (inside the template)
 
 - Layout: `body` = fixed-height flex column; sticky dark header (event title, group

@@ -2,6 +2,32 @@
 
 A dated log of changes. Newest entries at the top.
 
+## 2026-07-28 — Swipe now moves between DAYS, not departments
+
+- Reported as "lost the ability to swipe left/right on Android". Investigated
+  first: swipe was **not** broken — verified on emulated Android (Pixel 7, real
+  touch events) that pure-horizontal, diagonal (30px/60px drift), and
+  post-vertical-scroll swipes all worked, and the layout CSS was unchanged since
+  the last known-good release. The actual issue was an expectation mismatch: the
+  gesture was bound to departments while the owner (and therefore volunteers)
+  expected days.
+- **Changed the swipe axis**: the swiper now holds one page per *day of the
+  current department*. Swiping moves Friday → Saturday → Sunday; departments are
+  picked from the pill bar, which rebuilds the pages and keeps the current day.
+  This also fixes single-department files, where department-swiping had nothing
+  to move to (verified: 1 group previously produced one page and no swipe).
+- `renderSection` now takes `dayId` explicitly rather than reading a global,
+  since sibling pages render different days.
+- Non-per-day sections (contacts, images, directory) repeat on each day page, so
+  viewer images gained `loading="lazy" decoding="async"` to avoid decoding the
+  same maps three times — relevant to the older-iPhone memory concern.
+- Verified: swipe both directions updates the day tab; tapping a day tab jumps;
+  switching department preserves the day; each page holds the correct day's data
+  (Saturday-only roster entry and per-day Stage notes appear only on their own
+  page); directory open/search shared across a department's day pages; lightbox
+  and the no-JS static view unaffected.
+- Updated the in-app hint, the how-to guide, and regenerated screenshots.
+
 ## 2026-07-28 — WhatsApp contacts alongside phone numbers
 
 - Volunteers on site often reach each other over WhatsApp because plain calls

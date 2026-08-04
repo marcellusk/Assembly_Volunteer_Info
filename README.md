@@ -30,9 +30,9 @@ no account, no internet needed after delivery.
 - **Groups (departments)** with flexible building-block sections: contact lists,
   per-day assignment rosters, time-slot schedules, notes (shared or per-day),
   image/map galleries, and searchable volunteer directories.
-- **Swipe navigation** in the volunteer file, with day tabs and tap-to-call.
+- **Swipe between days** in the volunteer file (Friday/Saturday/Sunday), tap a department to switch, tap-to-call and tap-to-WhatsApp.
 - **Name autocomplete** everywhere, fed by the directories across all groups,
-  with automatic phone fill.
+  with automatic phone and WhatsApp fill.
 - **Distributed data entry**: each department captain edits their group in their
   own copy and exports it as a small JSON file; the coordinator imports it into
   the master. Images intentionally never travel in JSON (validated on import).

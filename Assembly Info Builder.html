@@ -271,19 +271,34 @@
     } else { h += '<div style="height:8px"></div>'; }
     hdr.innerHTML = h;
     hdr.querySelectorAll('.pill').forEach(function(b){
-      b.onclick = function(){ scrollToGroup(+b.dataset.g); };
+      b.onclick = function(){ setGroup(+b.dataset.g); };
     });
     hdr.querySelectorAll('.dtab').forEach(function(b){
-      b.onclick = function(){ curDay = b.dataset.d; renderHeader(); renderPanels(); };
+      b.onclick = function(){ scrollToDay(dayIndex(b.dataset.d), true); };
     });
     var ap = hdr.querySelector('.pill.active');
     if (ap && ap.scrollIntoView) ap.scrollIntoView({block:'nearest', inline:'center', behavior:'smooth'});
   }
 
-  var uiState = {};  // per-group: {dirOpen, search}
+  function dayIndex(id){
+    for (var i = 0; i < days.length; i++) { if (days[i].id === id) return i; }
+    return 0;
+  }
+  // Switching department keeps the day you were on and rebuilds the day pages.
+  function setGroup(i){
+    if (i === curGroup) return;
+    curGroup = i;
+    renderHeader();
+    renderPanels();
+    scrollToDay(dayIndex(curDay), false);
+  }
+
+  var uiState = {};  // per-group: {dirOpen, search} — shared across that group's day pages
   function gs(gi){ return uiState[gi] || (uiState[gi] = {dirOpen:false, search:''}); }
 
-  function renderSection(sec, gi){
+  // dayId is passed explicitly: every day of the current group is rendered as
+  // its own page so swiping moves between days, so this can't read a global.
+  function renderSection(sec, gi, dayId){
     var out = '';
     if (sec.type === 'contacts') {
       out += '<div class="contactsbox"><div class="sechead">' + esc(sec.title) + '</div>';
@@ -298,7 +313,7 @@
       out += '</div>';
     }
     else if (sec.type === 'roster') {
-      var lots = (sec.perDay && sec.perDay[curDay]) || [];
+      var lots = (sec.perDay && sec.perDay[dayId]) || [];
       out += '<div><div class="sechead">' + esc(sec.title) + '</div>';
       if (!lots.length) out += '<div class="empty">No assignments for this day.</div>';
       lots.forEach(function(lot){
@@ -311,7 +326,7 @@
       out += '</div>';
     }
     else if (sec.type === 'schedule') {
-      var rows = (sec.perDay && sec.perDay[curDay]) || [];
+      var rows = (sec.perDay && sec.perDay[dayId]) || [];
       out += '<div><div class="sechead">' + esc(sec.title) + '</div><div class="schedbox">';
       if (!rows.length) out += '<div class="srow"><span class="empty">Nothing scheduled for this day.</span></div>';
       rows.forEach(function(r){
@@ -323,7 +338,7 @@
       out += '</div></div>';
     }
     else if (sec.type === 'notes') {
-      var txt = sec.byDay ? ((sec.perDayText && sec.perDayText[curDay]) || '') : (sec.text || '');
+      var txt = sec.byDay ? ((sec.perDayText && sec.perDayText[dayId]) || '') : (sec.text || '');
       if (txt.trim()) {
         out += '<div><div class="sechead">' + esc(sec.title) + '</div><div class="notesbox">' + esc(txt) + '</div></div>';
       }
@@ -333,13 +348,13 @@
       if (items.length) {
         out += '<div><div class="sechead">' + esc(sec.title) + '</div>';
         if (items.length === 1) {
-          out += '<div class="imgsolo" data-lb="' + gi + ':' + 0 + ':' + sec.id + '"><img src="' + items[0].src + '" alt="' + esc(items[0].caption) + '">' +
+          out += '<div class="imgsolo" data-lb="' + gi + ':' + 0 + ':' + sec.id + '"><img loading="lazy" decoding="async" src="' + items[0].src + '" alt="' + esc(items[0].caption) + '">' +
             (items[0].caption ? '<div class="cap">' + esc(items[0].caption) + '</div>' : '') + '</div>' +
             '<div style="font-size:12px;color:oklch(0.55 0.01 260);margin-top:6px">Tap image to enlarge.</div>';
         } else {
           out += '<div class="imggrid">';
           items.forEach(function(im, ii){
-            out += '<div class="imgcard" data-lb="' + gi + ':' + ii + ':' + sec.id + '"><img src="' + im.src + '" alt="' + esc(im.caption) + '">' +
+            out += '<div class="imgcard" data-lb="' + gi + ':' + ii + ':' + sec.id + '"><img loading="lazy" decoding="async" src="' + im.src + '" alt="' + esc(im.caption) + '">' +
               (im.caption ? '<div class="cap">' + esc(im.caption) + '</div>' : '') + '</div>';
           });
           out += '</div><div style="font-size:12px;color:oklch(0.55 0.01 260);margin-top:6px">Tap any image to enlarge.</div>';
@@ -373,27 +388,35 @@
     return out;
   }
 
+  /* One page per DAY of the current department, so left/right swipe moves
+     Friday → Saturday → Sunday (the axis volunteers actually move along).
+     Departments are chosen from the pill bar, which rebuilds these pages. */
   function renderPanels(){
     var scrollPositions = [];
     swiper.querySelectorAll('.panel').forEach(function(p){ scrollPositions.push(p.scrollTop); });
     var keepX = swiper.scrollLeft;
+    var g = groups[curGroup];
     var h = '';
-    groups.forEach(function(g, gi){
+    var list = days.length ? days : [{id: null, label: ''}];
+    list.forEach(function(d){
       h += '<div class="panel"><div class="pinner">';
-      g.sections.forEach(function(sec){ h += renderSection(sec, gi); });
+      if (g) g.sections.forEach(function(sec){ h += renderSection(sec, curGroup, d.id); });
       if (ev.footer && ev.footer.trim()) h += '<footer class="note">' + esc(ev.footer).replace(/\n/g,'<br>') + '</footer>';
       h += '</div></div>';
     });
     swiper.innerHTML = h;
     var panels = swiper.querySelectorAll('.panel');
-    panels.forEach(function(p,i){ if (scrollPositions[i] != null) p.scrollTop = scrollPositions[i]; });
+    panels.forEach(function(p,i){
+      p.dataset.di = i;
+      if (scrollPositions[i] != null) p.scrollTop = scrollPositions[i];
+    });
     swiper.scrollLeft = keepX;
     swiper.querySelectorAll('[data-lb]').forEach(function(elm){
       elm.onclick = function(){
         var parts = elm.dataset.lb.split(':');
-        var g = groups[+parts[0]];
+        var grp = groups[+parts[0]];
         var sec = null;
-        g.sections.forEach(function(s){ if (s.id === parts[2]) sec = s; });
+        grp.sections.forEach(function(s){ if (s.id === parts[2]) sec = s; });
         if (!sec) return;
         var im = sec.items.filter(function(x){ return x && x.src; })[+parts[1]];
         if (!im) return;
@@ -403,35 +426,36 @@
     });
     swiper.querySelectorAll('[data-dir]').forEach(function(b){
       b.onclick = function(){
-        var gi = +b.closest('.panel').dataset.gi;
-        var st = gs(gi); st.dirOpen = !st.dirOpen;
+        var st = gs(curGroup); st.dirOpen = !st.dirOpen;
         renderPanels();
       };
     });
-    panels.forEach(function(p,i){ p.dataset.gi = i; });
     swiper.querySelectorAll('[data-dirsearch]').forEach(function(inp){
       inp.oninput = function(){
-        var gi = +inp.closest('.panel').dataset.gi;
-        gs(gi).search = inp.value;
+        var di = +inp.closest('.panel').dataset.di;
+        gs(curGroup).search = inp.value;
         var keep = inp.selectionStart;
         renderPanels();
-        var again = swiper.querySelector('.panel[data-gi="' + gi + '"] [data-dirsearch]');
+        var again = swiper.querySelector('.panel[data-di="' + di + '"] [data-dirsearch]');
         if (again){ again.focus(); again.setSelectionRange(keep, keep); }
       };
     });
   }
 
-  function scrollToGroup(i){
-    swiper.scrollTo({left: i * swiper.clientWidth, behavior:'smooth'});
+  function scrollToDay(i, smooth){
+    var left = i * swiper.clientWidth;
+    if (smooth && swiper.scrollTo) swiper.scrollTo({left: left, behavior:'smooth'});
+    else swiper.scrollLeft = left;
   }
 
   var scrollTimer = null;
   swiper.addEventListener('scroll', function(){
     if (scrollTimer) clearTimeout(scrollTimer);
     scrollTimer = setTimeout(function(){
+      if (!days.length) return;
       var i = Math.round(swiper.scrollLeft / Math.max(1, swiper.clientWidth));
-      i = Math.max(0, Math.min(groups.length - 1, i));
-      if (i !== curGroup){ curGroup = i; renderHeader(); }
+      i = Math.max(0, Math.min(days.length - 1, i));
+      if (days[i].id !== curDay){ curDay = days[i].id; renderHeader(); }
     }, 80);
   });
 
@@ -1339,7 +1363,7 @@ function renderGroupTabs(){
   tabs.appendChild(imp);
   c.appendChild(fileInp);
   c.appendChild(tabs);
-  c.appendChild(h('<div class="muted" style="margin-top:8px">Volunteers swipe left / right between groups in the exported file, in this order. Captains can build their group in their own copy, export it as JSON, and send it to you to import here (images travel separately).</div>'));
+  c.appendChild(h('<div class="muted" style="margin-top:8px">In the exported file volunteers tap a department from the row of buttons at the top (shown in this order) and swipe left / right to move between days. Captains can build their group in their own copy, export it as JSON, and send it to you to import here (images travel separately).</div>'));
   return c;
 }
 
