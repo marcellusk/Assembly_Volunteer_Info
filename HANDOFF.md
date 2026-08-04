@@ -278,6 +278,36 @@ the static no-JS view that must render on old phones.
   tear down the color input and close the OS picker. `input` updates the model
   and the live preview chip only.
 
+## Navigating the static view without JavaScript
+
+Most iPhone volunteers only ever see the static view (iOS previews HTML
+attachments without running scripts), so it carries its own navigation built
+from HTML and CSS only:
+
+- **Jump lists** (`.sv-jump`) — a department row at the top and a day row inside
+  each department, both plain `#fragment` anchors.
+- **Day blocks** — each day is a `<details class="sv-dayblock" open>` with the
+  date as its `<summary>`, so a reader can fold away days they don't need.
+- **`open` is mandatory.** If the previewer refuses to toggle `<details>`,
+  everything must still be readable. Never ship these closed, and never use the
+  CSS-only tab patterns (hidden radios, `:target` show/hide) that *hide*
+  content — a preview that blocks interaction would show a blank page, which is
+  the failure the static view exists to prevent.
+- **Structure follows days, not sections.** Content that is identical on every
+  day (`varies()` is false) renders once, labelled "same every day"; only
+  genuinely day-varying sections go inside the day blocks. Author ordering is
+  preserved by splitting sections into *before* / day blocks / *after* around
+  the first day-varying section, so contacts stay on top and maps/directory stay
+  at the bottom.
+- Maps render two-up and height-capped (`.sv-figs`) because full-width images
+  buried everything after them; pinch-zoom still reads them.
+
+Verified with JavaScript disabled: anchors scroll to the right department and
+day, tapping a summary collapses that day, and folding all days took the demo
+from 13 phone screens to 8. **Still unverified: whether iOS QuickLook itself
+permits link taps and `<details>` toggling** — that needs a physical device.
+The design degrades to a plain readable scroll if it doesn't.
+
 ## The no-JS static fallback (do not remove)
 
 iOS previews HTML attachments (Messages, Mail, Files) with QuickLook, which

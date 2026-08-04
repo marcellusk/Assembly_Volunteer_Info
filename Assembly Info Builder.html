@@ -123,6 +123,22 @@
   #static-view img{width:100%;border-radius:8px;border:1px solid #ddd;display:block}
   #static-view figure{margin:0 0 12px}
   #static-view figcaption{font-size:13px;color:#666;margin-top:4px}
+  /* Maps two-up and height-capped: at full width a handful of them buried the
+     rest of the page. Pinch-zoom still reads them. */
+  .sv-figs{display:flex;flex-wrap:wrap;gap:10px}
+  .sv-figs figure{margin:0;flex:1 1 calc(50% - 6px);min-width:130px}
+  .sv-figs img{max-height:200px;object-fit:contain;background:#fff}
+  .sv-hint{font-size:12.5px;color:#77716a;margin:2px 0 8px;font-style:italic}
+  /* Jump lists degrade to a plain contents list if the previewer ignores taps. */
+  .sv-jump{background:#fff;border:1px solid #ddd;border-radius:10px;padding:8px 10px;margin:12px 0;font-size:13.5px}
+  .sv-jump b{color:#555;margin-right:4px}
+  #static-view .sv-jump a{display:inline-block;background:#eef0f3;border:1px solid #dcdfe4;border-radius:99px;
+    padding:3px 11px;margin:3px 5px 3px 0;color:#2a5aa8;font-weight:700;font-size:13px}
+  /* open by default — if <details> cannot be toggled here, nothing is hidden */
+  .sv-dayblock{border:1px solid #dcdad3;border-radius:10px;background:#fbfaf8;margin:10px 0;padding:0 10px 6px}
+  .sv-daysum{font-weight:700;font-size:16px;padding:10px 2px;cursor:pointer}
+  .sv-dayblock[open] > .sv-daysum{border-bottom:1px solid #e6e4dd;margin-bottom:8px}
+  .sv-same{font-weight:400;text-transform:none;letter-spacing:0;color:#8a857c;font-size:11.5px}
   .sv-foot{border-top:1px solid #ddd;margin-top:20px;padding-top:12px;font-size:13px;color:#666;white-space:pre-wrap}
   #static-view a{color:#2a5aa8;text-decoration:none}
   #static-view a.wa{display:inline-block;background:#25d366;color:#06331f;font-size:11px;font-weight:700;
@@ -731,81 +747,162 @@ function buildStaticView(proj){
       });
     }
   }
-  out.push('<div class="sv-note"><b>Simplified view.</b> For day tabs, search, and swiping between departments, open this file in a web browser (Safari, Chrome…) — for example, save it to Files and open it from there, or use your phone’s Share &#8594; Open in Browser option.</div>');
+  /* A section is "daily" only when its content actually differs between days.
+     One that happens to be identical every day is rendered ONCE instead of
+     being repeated — that alone removes screens of duplication. */
+  function textAllSame(s){
+    if (p.event.days.length < 2) return true;
+    var first = (((s.perDayText || {})[p.event.days[0].id]) || '').trim();
+    for (var i = 1; i < p.event.days.length; i++) {
+      if ((((s.perDayText || {})[p.event.days[i].id]) || '').trim() !== first) return false;
+    }
+    return true;
+  }
+  function varies(s){
+    if (s.type === 'roster' || s.type === 'schedule') return !daysAllSame(s.perDay);
+    if (s.type === 'notes' && s.byDay) return !textAllSame(s);
+    return false;
+  }
+  function firstListOf(s){
+    var d0 = p.event.days[0];
+    return (s.perDay && d0 && s.perDay[d0.id]) || [];
+  }
+  function rosterCards(list){
+    list.forEach(function(area){
+      out.push('<div class="sv-card"><div class="sv-card-h">' + esc(area.name) + '</div><div class="sv-card-b">');
+      (area.people || []).forEach(function(pp){
+        out.push('<div class="sv-row"><span>' + esc(pp.name) + '</span><span class="r">' + esc(pp.role) + '</span></div>');
+      });
+      out.push('</div></div>');
+    });
+  }
+  function scheduleCard(list){
+    if (!list.length) return;
+    out.push('<div class="sv-card"><div class="sv-card-b">');
+    list.forEach(function(r){
+      out.push('<div class="sv-row"><span><b>' + esc(r.time) + '</b>&nbsp; ' + esc(r.name) + '</span><span>' + phoneLink(r.phone, r.wa) + '</span></div>');
+    });
+    out.push('</div></div>');
+  }
+  function head(s, extra){
+    out.push('<div class="sv-sec">' + esc(s.title) + (extra || '') + '</div>');
+  }
+
+  // Rendered once per department, outside the per-day blocks.
+  function renderShared(s){
+    if (s.type === 'contacts') {
+      if (!(s.items || []).length) return;
+      head(s);
+      out.push('<div class="sv-contacts">');
+      s.items.forEach(function(c){
+        out.push('<div class="sv-row"><span><b>' + esc(c.name) + '</b>' + (c.role ? ' — ' + esc(c.role) : '') + '</span><span>' + phoneLink(c.phone, c.wa) + '</span></div>');
+      });
+      out.push('</div>');
+    }
+    else if (s.type === 'roster') {
+      var list = firstListOf(s);
+      if (!list.length) return;
+      head(s, p.event.days.length > 1 ? ' <span class="sv-same">same every day</span>' : '');
+      rosterCards(list);
+    }
+    else if (s.type === 'schedule') {
+      var slist = firstListOf(s);
+      if (!slist.length) return;
+      head(s, p.event.days.length > 1 ? ' <span class="sv-same">same every day</span>' : '');
+      scheduleCard(slist);
+    }
+    else if (s.type === 'notes') {
+      var txt = s.byDay ? ((((s.perDayText || {})[p.event.days[0] && p.event.days[0].id]) || '').trim()) : ((s.text || '').trim());
+      if (!txt) return;
+      head(s);
+      out.push('<div class="sv-notes">' + esc(txt) + '</div>');
+    }
+    else if (s.type === 'images') {
+      var items = (s.items || []).filter(function(im){ return im.src; });
+      if (!items.length) return;
+      head(s);
+      out.push('<div class="sv-figs">');
+      (s.items || []).forEach(function(im){
+        if (!im.src) return;
+        var id = 'simg-' + (imgCount++);
+        out.push('<figure><img id="' + id + '" src="' + im.src + '" alt="' + esc(im.caption) + '">' +
+          (im.caption ? '<figcaption>' + esc(im.caption) + '</figcaption>' : '') + '</figure>');
+        im.src = '#' + id;
+      });
+      out.push('</div><div class="sv-hint">Pinch to zoom any map.</div>');
+    }
+    else if (s.type === 'directory') {
+      if (!(s.items || []).length) return;
+      head(s, ' (' + s.items.length + ')');
+      out.push('<div class="sv-card"><div class="sv-card-b">');
+      s.items.slice().sort(function(a, b){ return (a.name || '').localeCompare(b.name || ''); }).forEach(function(v){
+        out.push('<div class="sv-row" style="padding:5px 0"><span><b>' + esc(v.name) + '</b>' +
+          (v.assignment ? '<br><span style="color:#667;font-size:13px">' + esc(v.assignment) + '</span>' : '') +
+          (v.constraints ? '<br><i style="color:#996;font-size:12px">' + esc(v.constraints) + '</i>' : '') +
+          '</span><span>' + phoneLink(v.phone, v.wa) + '</span></div>');
+      });
+      out.push('</div></div>');
+    }
+  }
+
+  // Rendered inside a single day's block. Returns true if anything was output.
+  function renderForDay(s, dayId){
+    if (s.type === 'roster') {
+      var list = (s.perDay && s.perDay[dayId]) || [];
+      if (!list.length) return false;
+      head(s); rosterCards(list); return true;
+    }
+    if (s.type === 'schedule') {
+      var slist = (s.perDay && s.perDay[dayId]) || [];
+      if (!slist.length) return false;
+      head(s); scheduleCard(slist); return true;
+    }
+    if (s.type === 'notes') {
+      var txt = (((s.perDayText || {})[dayId]) || '').trim();
+      if (!txt) return false;
+      head(s);
+      out.push('<div class="sv-notes">' + esc(txt) + '</div>');
+      return true;
+    }
+    return false;
+  }
+
+  out.push('<div class="sv-note"><b>Simplified view.</b> Everything is on this page — tap a day below to jump to it, or tap a day heading to fold it away. For search and swiping, open this file in a web browser.</div>');
   out.push('<h1 class="sv-title">' + esc(p.event.title) + '</h1>');
   if (p.event.subtitle) out.push('<div class="sv-sub">' + esc(p.event.subtitle) + '</div>');
-  p.groups.forEach(function(g){
-    out.push('<h2 class="sv-group" style="background:' + g.ui.bg + ';color:' + g.ui.fg + '">' + esc(g.name) + '</h2>');
-    g.sections.forEach(function(s){
-      if (s.type === 'contacts') {
-        if (!(s.items || []).length) return;
-        out.push('<div class="sv-sec">' + esc(s.title) + '</div><div class="sv-contacts">');
-        s.items.forEach(function(c){
-          out.push('<div class="sv-row"><span><b>' + esc(c.name) + '</b>' + (c.role ? ' — ' + esc(c.role) : '') + '</span><span>' + phoneLink(c.phone, c.wa) + '</span></div>');
-        });
-        out.push('</div>');
-      }
-      else if (s.type === 'roster') {
-        out.push('<div class="sv-sec">' + esc(s.title) + '</div>');
-        eachDay(s.perDay, function(list){
-          list.forEach(function(area){
-            out.push('<div class="sv-card"><div class="sv-card-h">' + esc(area.name) + '</div><div class="sv-card-b">');
-            (area.people || []).forEach(function(pp){
-              out.push('<div class="sv-row"><span>' + esc(pp.name) + '</span><span class="r">' + esc(pp.role) + '</span></div>');
-            });
-            out.push('</div></div>');
-          });
-        });
-      }
-      else if (s.type === 'schedule') {
-        out.push('<div class="sv-sec">' + esc(s.title) + '</div>');
-        eachDay(s.perDay, function(list){
-          out.push('<div class="sv-card"><div class="sv-card-b">');
-          list.forEach(function(r){
-            out.push('<div class="sv-row"><span><b>' + esc(r.time) + '</b>&nbsp; ' + esc(r.name) + '</span><span>' + phoneLink(r.phone, r.wa) + '</span></div>');
-          });
-          out.push('</div></div>');
-        });
-      }
-      else if (s.type === 'notes') {
-        if (s.byDay) {
-          var any = false;
-          p.event.days.forEach(function(d){ if (((s.perDayText || {})[d.id] || '').trim()) any = true; });
-          if (!any) return;
-          out.push('<div class="sv-sec">' + esc(s.title) + '</div>');
-          p.event.days.forEach(function(d){
-            var t = ((s.perDayText || {})[d.id] || '').trim();
-            if (!t) return;
-            out.push('<div class="sv-day">' + esc(d.label) + '</div><div class="sv-notes">' + esc(t) + '</div>');
-          });
-        } else if ((s.text || '').trim()) {
-          out.push('<div class="sv-sec">' + esc(s.title) + '</div><div class="sv-notes">' + esc(s.text) + '</div>');
-        }
-      }
-      else if (s.type === 'images') {
-        var items = (s.items || []).filter(function(im){ return im.src; });
-        if (!items.length) return;
-        out.push('<div class="sv-sec">' + esc(s.title) + '</div>');
-        (s.items || []).forEach(function(im){
-          if (!im.src) return;
-          var id = 'simg-' + (imgCount++);
-          out.push('<figure><img id="' + id + '" src="' + im.src + '" alt="' + esc(im.caption) + '">' +
-            (im.caption ? '<figcaption>' + esc(im.caption) + '</figcaption>' : '') + '</figure>');
-          im.src = '#' + id;
-        });
-      }
-      else if (s.type === 'directory') {
-        if (!(s.items || []).length) return;
-        out.push('<div class="sv-sec">' + esc(s.title) + ' (' + s.items.length + ')</div><div class="sv-card"><div class="sv-card-b">');
-        s.items.slice().sort(function(a, b){ return (a.name || '').localeCompare(b.name || ''); }).forEach(function(v){
-          out.push('<div class="sv-row" style="padding:5px 0"><span><b>' + esc(v.name) + '</b>' +
-            (v.assignment ? '<br><span style="color:#667;font-size:13px">' + esc(v.assignment) + '</span>' : '') +
-            (v.constraints ? '<br><i style="color:#996;font-size:12px">' + esc(v.constraints) + '</i>' : '') +
-            '</span><span>' + phoneLink(v.phone, v.wa) + '</span></div>');
-        });
-        out.push('</div></div>');
-      }
+  if (p.groups.length > 1) {
+    out.push('<div class="sv-jump"><b>Departments:</b> ' + p.groups.map(function(g, gi){
+      return '<a href="#g' + gi + '">' + esc(g.name) + '</a>';
+    }).join('') + '</div>');
+  }
+  p.groups.forEach(function(g, gi){
+    out.push('<h2 class="sv-group" id="g' + gi + '" style="background:' + g.ui.bg + ';color:' + g.ui.fg + '">' + esc(g.name) + '</h2>');
+    // Keep the author's ordering: whatever came before the first day-varying
+    // section stays on top, the day blocks take its place, the rest follows.
+    var firstVar = -1;
+    g.sections.forEach(function(s, i){ if (firstVar < 0 && varies(s)) firstVar = i; });
+    var before = [], after = [], daily = [];
+    g.sections.forEach(function(s, i){
+      if (varies(s)) { daily.push(s); return; }
+      if (firstVar < 0 || i < firstVar) before.push(s); else after.push(s);
     });
+    before.forEach(renderShared);
+    if (daily.length && p.event.days.length) {
+      if (p.event.days.length > 1) {
+        out.push('<div class="sv-jump"><b>Jump to:</b> ' + p.event.days.map(function(d, di){
+          return '<a href="#g' + gi + 'd' + di + '">' + esc(d.label) + '</a>';
+        }).join('') + '</div>');
+      }
+      p.event.days.forEach(function(d, di){
+        // open by default: if the previewer will not toggle <details>, nothing is hidden
+        out.push('<details class="sv-dayblock" id="g' + gi + 'd' + di + '" open><summary class="sv-daysum">' + esc(d.label) + '</summary>');
+        var any = false;
+        daily.forEach(function(s){ if (renderForDay(s, d.id)) any = true; });
+        if (!any) out.push('<div class="sv-hint">Nothing listed for this day.</div>');
+        out.push('</details>');
+      });
+    }
+    after.forEach(renderShared);
   });
   if ((p.event.footer || '').trim()) out.push('<div class="sv-foot">' + esc(p.event.footer) + '</div>');
   return { html: out.join(''), project: p };

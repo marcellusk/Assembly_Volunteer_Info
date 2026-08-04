@@ -2,6 +2,34 @@
 
 A dated log of changes. Newest entries at the top.
 
+## 2026-08-03 — Navigation for the no-JavaScript (iPhone) view
+
+- Measured the gap first: the static view was 13 phone screens of continuous
+  scroll for the demo (7 for the single-department Lunch Delivery example) with
+  **zero** in-page links and no way to skip a day — and that is what most
+  iPhone volunteers see, since iOS previews HTML attachments without scripts.
+- Added navigation built only from HTML/CSS, so it works with scripts off:
+  - a **department jump row** at the top and a **day jump row** inside each
+    department (plain `#fragment` anchors);
+  - each day is now a `<details open>` block with the date as its summary, so
+    days can be folded away.
+- **Everything is open by default and no CSS-only tab tricks were used.** If a
+  previewer refuses to toggle `<details>` or follow anchors, the page is still a
+  complete readable scroll — the fail-safe rule the static view exists for.
+- Restructured the static view around **days rather than sections**: content
+  identical on every day renders once (labelled "same every day") instead of
+  being repeated, and only day-varying sections sit inside the day blocks.
+  Author ordering is preserved by splitting sections before/after the first
+  day-varying one, so contacts stay on top and maps/directory at the bottom.
+- Maps now render two-up and height-capped; at full width a handful of them
+  buried everything below. Pinch-zoom still reads them.
+- Verified with JavaScript disabled: department and day anchors land correctly,
+  tapping a day summary collapses it, and folding all days took the demo from
+  13 screens to 8. The interactive path is unchanged (image markers still
+  resolve, lightbox and swipe unaffected).
+- **Still unverified:** whether iOS QuickLook permits link taps and `<details>`
+  toggling at all. Needs a physical-device check; noted in HANDOFF.md.
+
 ## 2026-08-03 — Calendar dates on days; viewer opens on today
 
 - Days now carry an optional ISO `date` alongside their label. The builder gives
